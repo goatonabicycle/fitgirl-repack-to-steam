@@ -1,0 +1,18 @@
+{
+  "name": "fitgirl-repack-to-steam",
+  "version": "0.0.1",
+  "description": "This links FitGirl Repacks entries to their Steam pages. Maybe you should buy this one?",
+  "type": "module",
+  "scripts": {
+    "dev": "extension dev",
+    "build": "extension build",
+    "format": "biome format --write .",
+    "lint": "biome lint ."
+  },
+  "dependencies": {
+    "extension": "latest"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "latest"
+  }
+}

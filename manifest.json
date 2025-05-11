@@ -1,0 +1,29 @@
+{
+  "name": "Fitgirl repack to Steam",
+  "short_name": "FGR-to-Steam",
+  "description": "This links FitGirl Repacks entries to their Steam pages. Maybe you should buy this one?",
+  "version": "0.0.1",
+  "manifest_version": 3,
+  "host_permissions": [
+    "*://*.fitgirl-repacks.site/*",
+    "*://*.steampowered.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.fitgirl-repacks.site/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "permissions": [
+    "storage",
+    "activeTab"
+  ]
+}
