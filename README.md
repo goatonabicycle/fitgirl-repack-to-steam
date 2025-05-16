@@ -1,4 +1,6 @@
-# fitgirl-repack-to-steam
+# FitGirl Repack to Steam
+
+Adds Steam links with prices and reviews directly to FitGirl Repacks game listings.
 
 ## Maybe this one is worth buying?
 
