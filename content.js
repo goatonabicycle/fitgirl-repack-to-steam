@@ -65,11 +65,15 @@ function replaceLoadingWithElement(parentElement, newElement) {
   const loadingEl = parentElement.querySelector(".steam-card-loading");
 
   if (loadingEl) {
-    parentElement.insertBefore(newElement, loadingEl);
-    loadingEl.remove();
+    loadingEl.replaceWith(newElement);
   } else {
-    const firstChild = parentElement.firstChild;
-    parentElement.insertBefore(newElement, firstChild ? firstChild.nextSibling : null);
+    const insertAfter = parentElement.firstElementChild || null;
+
+    if (insertAfter) {
+      insertAfter.after(newElement);
+    } else {
+      parentElement.prepend(newElement);
+    }
   }
 }
 
