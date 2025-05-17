@@ -4,8 +4,11 @@
   "description": "This links FitGirl Repacks entries to their Steam pages. Maybe you should buy this one?",
   "type": "module",
   "scripts": {
-    "dev": "extension dev",
     "build": "extension build",
+    "buildff": "extension build --browser firefox",
+    "dev": "extension dev",
+    "devff": "extension dev --browser firefox",
+    "start": "extension start",
     "format": "biome format --write .",
     "lint": "biome lint ."
   },

@@ -1,3 +1,7 @@
+const getBrowserAPI = () => {
+  return typeof chrome !== 'undefined' ? chrome : browser;
+};
+
 function extractGameName(text) {
   const cleaningPatterns = [
     /[\[\(]?repack[\]\)]?/i,
@@ -133,7 +137,7 @@ async function processElement(element) {
   const gameName = extractGameName(element.textContent.trim());
 
   try {
-    const response = await chrome.runtime.sendMessage({ action: "searchGame", gameName });
+    const response = await getBrowserAPI().runtime.sendMessage({ action: "searchGame", gameName });
 
     const card = createSteamCard(response?.success ? response.result : null, gameName);
     replaceLoadingWithElement(element.parentNode, card);

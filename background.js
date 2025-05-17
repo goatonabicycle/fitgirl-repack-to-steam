@@ -1,3 +1,7 @@
+const getBrowserAPI = () => {
+  return typeof chrome !== 'undefined' ? chrome : browser;
+};
+
 const CACHE_EXPIRATION = 30 * 24 * 60 * 60 * 1000;
 const API_DELAY = 1000;
 const MAX_RETRIES = 3;
@@ -94,7 +98,7 @@ async function enrichGameWithReviews(game) {
   }
 }
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+getBrowserAPI().runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log("Background script received message:", request);
 
   if (request.action === "searchGame") {
@@ -353,7 +357,7 @@ async function trySearch(searchTerm) {
 
 async function getCachedGame(key) {
   return new Promise(resolve => {
-    chrome.storage.local.get([key], result => {
+    getBrowserAPI().storage.local.get([key], result => {
       if (!result[key]) {
         resolve(null);
         return;
@@ -362,7 +366,7 @@ async function getCachedGame(key) {
       const entry = result[key];
 
       if (Date.now() - entry.timestamp > CACHE_EXPIRATION) {
-        chrome.storage.local.remove([key]);
+        getBrowserAPI().storage.local.remove([key]);
         resolve(null);
         return;
       }
@@ -379,6 +383,6 @@ async function cacheResult(key, data) {
       timestamp: Date.now()
     };
 
-    chrome.storage.local.set({ [key]: entry }, resolve);
+    getBrowserAPI().storage.local.set({ [key]: entry }, resolve);
   });
 }
