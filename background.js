@@ -297,13 +297,16 @@ async function searchSteam(gameName) {
     return null;
   }
 
-  const games = data.items.filter(item =>
-    item.type === "app" &&
-    !item.name.toLowerCase().includes("demo") &&
-    !item.name.toLowerCase().includes("soundtrack") &&
-    !item.name.toLowerCase().includes("dlc") &&
-    !item.name.toLowerCase().includes("art book")
-  );
+  const games = data.items.filter(item => {
+    const name = item.name.toLowerCase();
+    return item.type === "app" &&
+      !(name.endsWith(" demo") ||
+        name === "demo" ||
+        name.startsWith("demo ") ||
+        name.endsWith(" soundtrack") ||
+        name.endsWith(" dlc") ||
+        name.endsWith(" art book"));
+  });
 
   if (games.length === 0) {
     console.log("No valid games after filtering");
