@@ -259,7 +259,6 @@ function findBestMatch(gameName, results) {
   return null;
 }
 
-// TODO: This function is a bit of a mess
 async function searchSteam(gameName) {
   console.log("Received game name:", gameName);
 
