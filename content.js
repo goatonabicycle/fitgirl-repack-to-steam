@@ -15,7 +15,14 @@ function extractGameName(text) {
     /\s*Digital\s+Collectors?\s+Edition/i,
     /\s*–\s*[^-]+$/,
     /\s*\+\s*\d+\s*DLCs?.*$/i,
-    /\s*Build\s+\d+.*$/i
+    /\s*Build\s+\d+.*$/i,
+    /\s*\+\s*Bonus\s+Soundtrack/i,
+    /\s*\+\s*Soundtrack/i,
+    /\s*\+\s*OST/i,
+    /\s*\+\s*Artbook/i,
+    /\s*\+\s*Art\s+Book/i,
+    /\s*\+\s*Bonus\s+Content/i,
+    /\s*\+\s*Extras/i
   ];
 
   let cleanedName = text;

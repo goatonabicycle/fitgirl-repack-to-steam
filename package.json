@@ -13,7 +13,7 @@
     "lint": "biome lint ."
   },
   "dependencies": {
-    "extension": "2.0.0-rc.38"
+    "extension": "^2.1.3"
   },
   "devDependencies": {
     "@biomejs/biome": "latest"

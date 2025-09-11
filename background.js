@@ -385,6 +385,28 @@ async function cacheResult(key, data) {
       timestamp: Date.now()
     };
 
-    getBrowserAPI().storage.local.set({ [key]: entry }, resolve);
+    getBrowserAPI().storage.local.set({ [key]: entry }, () => {
+      cleanupOldCache();
+      resolve();
+    });
+  });
+}
+
+async function cleanupOldCache() {
+  getBrowserAPI().storage.local.get(null, (items) => {
+    const now = Date.now();
+    const keysToRemove = [];
+    
+    for (const [key, value] of Object.entries(items)) {
+      if (key.startsWith('game:') && value.timestamp) {
+        if (now - value.timestamp > CACHE_EXPIRATION) {
+          keysToRemove.push(key);
+        }
+      }
+    }
+    
+    if (keysToRemove.length > 0) {
+      getBrowserAPI().storage.local.remove(keysToRemove);
+    }
   });
 }
