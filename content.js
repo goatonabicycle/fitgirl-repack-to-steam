@@ -172,7 +172,7 @@ function findAndProcessGames() {
       }
     }
   }, {
-    rootMargin: "2000px",
+    rootMargin: "4000px",
     threshold: 0.1
   });
 
