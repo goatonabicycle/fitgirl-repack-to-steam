@@ -33,7 +33,7 @@ export default defineBackground(() => {
   }
 
   async function fetchGameDetails(gameId: number) {
-    const storeUrl = `https://store.steampowered.com/api/appdetails?appids=${gameId}&cc=US&l=english`;
+    const storeUrl = `https://store.steampowered.com/api/appdetails?appids=${gameId}&l=english`;
     const storeResponse = await rateLimitedFetch(storeUrl);
 
     if (!storeResponse.ok) {
@@ -53,7 +53,7 @@ export default defineBackground(() => {
   interface GameData {
     id: number;
     name: string;
-    price?: { final: number; initial?: number };
+    price?: { final: number; initial?: number; currency?: string };
     reviews?: number;
     reviewScore?: number;
     reviewText?: string;
@@ -84,6 +84,15 @@ export default defineBackground(() => {
       // Check if free to play
       if (details.is_free) {
         game.isFree = true;
+      }
+
+      // Extract price with currency from appdetails (more accurate than search)
+      if (details.price_overview) {
+        game.price = {
+          final: details.price_overview.final,
+          initial: details.price_overview.initial,
+          currency: details.price_overview.currency
+        };
       }
 
       // Fetch reviews from /appreviews/ API - this gives us Steam's exact review_score_desc

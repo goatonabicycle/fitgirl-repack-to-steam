@@ -74,6 +74,43 @@ export default defineContentScript({
       return "steam-card-metacritic-bad";
     }
 
+    function createInlineSteamLink(result: any): HTMLElement {
+      if (result) {
+        const link = document.createElement("a");
+        link.href = options.openInSteamClient
+          ? `steam://store/${result.id}`
+          : `https://store.steampowered.com/app/${result.id}`;
+        link.className = "steam-inline-link";
+        if (!options.openInSteamClient) {
+          link.target = "_blank";
+        }
+
+        let info = "Steam";
+        if (result.reviewText && result.reviewText !== "No user reviews") {
+          info = result.reviewText;
+        }
+        if (result.price?.final) {
+          const currency = result.price.currency || "USD";
+          const price = new Intl.NumberFormat(undefined, {
+            style: "currency",
+            currency: currency,
+          }).format(result.price.final / 100);
+          info += ` · ${price}`;
+        } else if (result.isFree) {
+          info += " · Free";
+        }
+
+        link.textContent = `[${info}]`;
+        link.title = `View ${result.name} on Steam`;
+        return link;
+      }
+
+      const notFound = document.createElement("span");
+      notFound.className = "steam-inline-not-found";
+      notFound.textContent = "[Not on Steam]";
+      return notFound;
+    }
+
     function createSteamCard(result: any): HTMLElement {
       if (result) {
         const steamLink = document.createElement("a");
@@ -92,9 +129,16 @@ export default defineContentScript({
             priceHTML = `<span class="steam-card-separator">•</span>
               <span class="steam-card-free">FREE</span>`;
           } else if (result.price?.final) {
-            const finalPrice = `$${(result.price.final / 100).toFixed(2)}`;
+            const currency = result.price.currency || "USD";
+            const formatPrice = (cents: number) => {
+              return new Intl.NumberFormat(undefined, {
+                style: "currency",
+                currency: currency,
+              }).format(cents / 100);
+            };
+            const finalPrice = formatPrice(result.price.final);
             const initialPrice = result.price.initial
-              ? (result.price.initial / 100).toFixed(2)
+              ? formatPrice(result.price.initial)
               : null;
             const isOnSale =
               initialPrice && result.price.initial > result.price.final;
@@ -105,7 +149,7 @@ export default defineContentScript({
               );
               priceHTML = `<span class="steam-card-separator">•</span>
                 <span class="steam-card-discount">-${discount}%</span>
-                <span class="steam-card-price-original">$${initialPrice}</span>
+                <span class="steam-card-price-original">${initialPrice}</span>
                 <span class="steam-card-price">${finalPrice}</span>`;
             } else {
               priceHTML = `<span class="steam-card-separator">•</span>
