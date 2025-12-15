@@ -50,13 +50,23 @@ export default defineContentScript({
         steamLink.dataset.processing = "true";
         steamLink.target = "_blank";
 
-        const price = result.price?.final ?
-          `$${(result.price.final / 100).toFixed(2)}` : "Not available";
+        let priceHTML = "";
+        if (result.price?.final) {
+          const finalPrice = `$${(result.price.final / 100).toFixed(2)}`;
+          const initialPrice = result.price.initial ? (result.price.initial / 100).toFixed(2) : null;
+          const isOnSale = initialPrice && result.price.initial > result.price.final;
 
-        const priceHTML = price !== "Not available"
-          ? `<span class="steam-card-separator">•</span>
-             <span class="steam-card-price">${price}</span>`
-          : "";
+          if (isOnSale) {
+            const discount = Math.round((1 - result.price.final / result.price.initial) * 100);
+            priceHTML = `<span class="steam-card-separator">•</span>
+              <span class="steam-card-discount">-${discount}%</span>
+              <span class="steam-card-price-original">$${initialPrice}</span>
+              <span class="steam-card-price">${finalPrice}</span>`;
+          } else {
+            priceHTML = `<span class="steam-card-separator">•</span>
+              <span class="steam-card-price">${finalPrice}</span>`;
+          }
+        }
 
         // Reviews - using Steam's exact review_score_desc from the API
         const reviewText = result.reviewText || "";

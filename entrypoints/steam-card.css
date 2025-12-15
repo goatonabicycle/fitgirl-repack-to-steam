@@ -44,8 +44,19 @@
 }
 
 .steam-card-discount {
-  color: #ff7b7b;
-  font-weight: normal;
+  background: #a4d007;
+  color: #1b2838;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.steam-card-price-original {
+  color: #8c8c8c;
+  text-decoration: line-through;
+  font-size: 0.85em;
+  margin-right: 4px;
 }
 
 .steam-card-review {
