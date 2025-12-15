@@ -1,10 +1,33 @@
 import './steam-card.css';
 
+interface DisplayOptions {
+  showPrice: boolean;
+  showReviews: boolean;
+  showReleaseDate: boolean;
+  showSteamDb: boolean;
+}
+
+const defaultOptions: DisplayOptions = {
+  showPrice: true,
+  showReviews: true,
+  showReleaseDate: true,
+  showSteamDb: true
+};
+
 export default defineContentScript({
   matches: ['*://*.fitgirl-repacks.site/*'],
   runAt: 'document_start',
 
   main() {
+    let options: DisplayOptions = { ...defaultOptions };
+
+    async function loadOptions() {
+      const result = await browser.storage.local.get('displayOptions');
+      options = result.displayOptions || defaultOptions;
+    }
+
+    // Load options immediately
+    loadOptions();
     function extractGameName(text: string): string {
       const cleaningPatterns = [
         /[\[\(]?repack[\]\)]?/i,
@@ -42,7 +65,7 @@ export default defineContentScript({
       return `steam-card-review-${reviewText.toLowerCase().replace(/\s+/g, "-")}`;
     }
 
-    function createSteamCard(result: any, gameName: string): HTMLElement {
+    function createSteamCard(result: any): HTMLElement {
       if (result) {
         const steamLink = document.createElement("a");
         steamLink.href = `https://store.steampowered.com/app/${result.id}`;
@@ -51,7 +74,7 @@ export default defineContentScript({
         steamLink.target = "_blank";
 
         let priceHTML = "";
-        if (result.price?.final) {
+        if (options.showPrice && result.price?.final) {
           const finalPrice = `$${(result.price.final / 100).toFixed(2)}`;
           const initialPrice = result.price.initial ? (result.price.initial / 100).toFixed(2) : null;
           const isOnSale = initialPrice && result.price.initial > result.price.final;
@@ -69,16 +92,19 @@ export default defineContentScript({
         }
 
         // Reviews - using Steam's exact review_score_desc from the API
-        const reviewText = result.reviewText || "";
-        const reviewCount = result.reviews ? `(${result.reviews.toLocaleString()})` : "";
-        const reviewHTML = reviewText
-          ? `<span class="steam-card-separator">•</span>
-             <span class="steam-card-review ${getReviewClass(reviewText)}">${reviewText}</span>
-             <span class="steam-card-review-count">${reviewCount}</span>`
-          : "";
+        let reviewHTML = "";
+        if (options.showReviews) {
+          const reviewText = result.reviewText || "";
+          const reviewCount = result.reviews ? `(${result.reviews.toLocaleString()})` : "";
+          reviewHTML = reviewText
+            ? `<span class="steam-card-separator">•</span>
+               <span class="steam-card-review ${getReviewClass(reviewText)}">${reviewText}</span>
+               <span class="steam-card-review-count">${reviewCount}</span>`
+            : "";
+        }
 
         // Release date
-        const releaseDateHTML = result.releaseDate
+        const releaseDateHTML = options.showReleaseDate && result.releaseDate
           ? `<span class="steam-card-separator">•</span>
              <span class="steam-card-release">${result.releaseDate}</span>`
           : "";
@@ -89,13 +115,29 @@ export default defineContentScript({
           ${releaseDateHTML}
         `;
 
-        return steamLink;
+        // Create container for both links
+        const container = document.createElement("div");
+        container.className = "steam-card-container";
+        container.dataset.processing = "true";
+        container.appendChild(steamLink);
+
+        // Add SteamDB link if enabled
+        if (options.showSteamDb) {
+          const steamDbLink = document.createElement("a");
+          steamDbLink.href = `https://steamdb.info/app/${result.id}/`;
+          steamDbLink.className = "steam-card-db";
+          steamDbLink.target = "_blank";
+          steamDbLink.textContent = "SteamDB";
+          container.appendChild(steamDbLink);
+        }
+
+        return container;
       }
 
       const notFoundCard = document.createElement("div");
-      notFoundCard.className = "steam-card";
+      notFoundCard.className = "steam-card steam-card-not-found";
       notFoundCard.dataset.processing = "true";
-      notFoundCard.textContent = `Not found on Steam: "${gameName}"`;
+      notFoundCard.innerHTML = `<span class="steam-card-text">Not found on Steam</span>`;
       return notFoundCard;
     }
 
@@ -175,7 +217,7 @@ export default defineContentScript({
       try {
         const response = await browser.runtime.sendMessage({ action: "searchGame", gameName });
 
-        const card = createSteamCard(response?.success ? response.result : null, gameName);
+        const card = createSteamCard(response?.success ? response.result : null);
         replaceLoadingWithElement(parent, card);
       } catch (error) {
         console.error("Failed to process game:", gameName, error);

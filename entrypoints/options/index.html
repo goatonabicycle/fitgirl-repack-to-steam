@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>FitGirl to Steam - Options</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1b2838;
+      color: #c7d5e0;
+      margin: 0;
+      padding: 24px;
+      min-width: 400px;
+    }
+    h1 {
+      color: #ffffff;
+      font-size: 18px;
+      margin: 0 0 20px 0;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #2a475e;
+    }
+    .option {
+      display: flex;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #2a475e;
+    }
+    .option:last-child {
+      border-bottom: none;
+    }
+    .option label {
+      flex: 1;
+      cursor: pointer;
+    }
+    .option-title {
+      display: block;
+      color: #ffffff;
+      font-size: 14px;
+      margin-bottom: 2px;
+    }
+    .option-desc {
+      display: block;
+      color: #8c8c8c;
+      font-size: 12px;
+    }
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: #66c0f4;
+    }
+    .saved {
+      color: #a4d007;
+      font-size: 12px;
+      margin-top: 16px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .saved.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <h1>Display Options</h1>
+
+  <div class="option">
+    <label for="showPrice">
+      <span class="option-title">Show Price</span>
+      <span class="option-desc">Display current price and sale discounts</span>
+    </label>
+    <input type="checkbox" id="showPrice" checked>
+  </div>
+
+  <div class="option">
+    <label for="showReviews">
+      <span class="option-title">Show Reviews</span>
+      <span class="option-desc">Display review rating and count</span>
+    </label>
+    <input type="checkbox" id="showReviews" checked>
+  </div>
+
+  <div class="option">
+    <label for="showReleaseDate">
+      <span class="option-title">Show Release Date</span>
+      <span class="option-desc">Display when the game was released</span>
+    </label>
+    <input type="checkbox" id="showReleaseDate" checked>
+  </div>
+
+  <div class="option">
+    <label for="showSteamDb">
+      <span class="option-title">Show SteamDB Link</span>
+      <span class="option-desc">Display link to SteamDB for price history</span>
+    </label>
+    <input type="checkbox" id="showSteamDb" checked>
+  </div>
+
+  <div class="saved" id="saved">Settings saved</div>
+
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
