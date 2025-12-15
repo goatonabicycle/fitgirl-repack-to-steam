@@ -1,5 +1,5 @@
 export default defineBackground(() => {
-  const CACHE_EXPIRATION = 30 * 24 * 60 * 60 * 1000;
+  const CACHE_EXPIRATION = 5 * 24 * 60 * 60 * 1000; // 5 days
   const API_DELAY = 1000;
   const MAX_RETRIES = 3;
 
@@ -392,10 +392,7 @@ export default defineBackground(() => {
       console.log("Starting Steam search for:", request.gameName);
 
       searchSteam(request.gameName)
-        .then(async result => {
-          if (result?.id) {
-            result = await enrichGameWithReviews(result);
-          }
+        .then(result => {
           console.log("Final result for:", request.gameName, result);
           sendResponse({ success: true, result });
         })
