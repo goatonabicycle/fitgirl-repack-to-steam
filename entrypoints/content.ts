@@ -6,6 +6,7 @@ interface DisplayOptions {
   showReleaseDate: boolean;
   showSteamDb: boolean;
   showMetacritic: boolean;
+  openInSteamClient: boolean;
 }
 
 const defaultOptions: DisplayOptions = {
@@ -14,6 +15,7 @@ const defaultOptions: DisplayOptions = {
   showReleaseDate: true,
   showSteamDb: true,
   showMetacritic: true,
+  openInSteamClient: true,
 };
 
 export default defineContentScript({
@@ -25,7 +27,8 @@ export default defineContentScript({
 
     async function loadOptions() {
       const result = await browser.storage.local.get("displayOptions");
-      options = result.displayOptions || defaultOptions;
+      const stored = result.displayOptions as Partial<DisplayOptions> | undefined;
+      options = { ...defaultOptions, ...stored };
     }
 
     // Load options immediately
@@ -74,9 +77,14 @@ export default defineContentScript({
     function createSteamCard(result: any): HTMLElement {
       if (result) {
         const steamLink = document.createElement("a");
-        steamLink.href = `steam://store/${result.id}`;
+        steamLink.href = options.openInSteamClient
+          ? `steam://store/${result.id}`
+          : `https://store.steampowered.com/app/${result.id}`;
         steamLink.className = "steam-card";
         steamLink.dataset.processing = "true";
+        if (!options.openInSteamClient) {
+          steamLink.target = "_blank";
+        }
 
         let priceHTML = "";
         if (options.showPrice) {
