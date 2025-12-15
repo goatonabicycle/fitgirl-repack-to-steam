@@ -60,9 +60,11 @@ export default defineContentScript({
 
         // Reviews - using Steam's exact review_score_desc from the API
         const reviewText = result.reviewText || "";
+        const reviewCount = result.reviews ? `(${result.reviews.toLocaleString()})` : "";
         const reviewHTML = reviewText
           ? `<span class="steam-card-separator">•</span>
-             <span class="steam-card-review ${getReviewClass(reviewText)}">${reviewText}</span>`
+             <span class="steam-card-review ${getReviewClass(reviewText)}">${reviewText}</span>
+             <span class="steam-card-review-count">${reviewCount}</span>`
           : "";
 
         steamLink.innerHTML = `<span class="steam-card-text">View on Steam</span>

@@ -53,6 +53,12 @@
   font-weight: normal;
 }
 
+.steam-card-review-count {
+  color: #8c8c8c;
+  font-size: 0.85em;
+  margin-left: 4px;
+}
+
 .steam-card-review-overwhelmingly-positive,
 .steam-card-review-very-positive,
 .steam-card-review-positive,
