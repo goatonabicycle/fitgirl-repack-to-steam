@@ -1,4 +1,4 @@
-import './steam-card.css';
+import "./steam-card.css";
 
 interface DisplayOptions {
   showPrice: boolean;
@@ -13,58 +13,56 @@ const defaultOptions: DisplayOptions = {
   showReviews: true,
   showReleaseDate: true,
   showSteamDb: true,
-  showMetacritic: true
+  showMetacritic: true,
 };
 
 export default defineContentScript({
-  matches: ['*://*.fitgirl-repacks.site/*'],
-  runAt: 'document_start',
+  matches: ["*://*.fitgirl-repacks.site/*"],
+  runAt: "document_start",
 
   main() {
     let options: DisplayOptions = { ...defaultOptions };
 
     async function loadOptions() {
-      const result = await browser.storage.local.get('displayOptions');
+      const result = await browser.storage.local.get("displayOptions");
       options = result.displayOptions || defaultOptions;
     }
 
     // Load options immediately
     loadOptions();
     function extractGameName(text: string): string {
+      let cleanedName = text;
+
       const cleaningPatterns = [
         /[\[\(]?repack[\]\)]?/i,
         /[\[\(]?fitgirl[\]\)]?/i,
         /[\[\(]?multi\d+[\]\)]?/i,
         /-\s*free\s*download/i,
-        /\+\s*all\s*dlcs?/i,
-        /v\d+\.\d+(\.\d+)?/i,
         /:\s*Supporter Edition/i,
         /:\s*Deluxe Edition/i,
         /\s*Digital\s+Collectors?\s+Edition/i,
-        /\s*–\s*[^-]+$/,
-        /\s*\+\s*\d+\s*DLCs?.*$/i,
-        /\s*Build\s+\d+.*$/i,
-        /\s*\+\s*Bonus\s+Soundtrack/i,
-        /\s*\+\s*Soundtrack/i,
-        /\s*\+\s*OST/i,
-        /\s*\+\s*Artbook/i,
-        /\s*\+\s*Art\s+Book/i,
-        /\s*\+\s*Bonus\s+Content/i,
-        /\s*\+\s*Extras/i
       ];
 
-      let cleanedName = text;
       for (const pattern of cleaningPatterns) {
         cleanedName = cleanedName.replace(pattern, "");
       }
 
+      cleanedName = cleanedName.replace(/\s+\+\s+.*$/i, "");
+      cleanedName = cleanedName.replace(/\s+\/\s+.*$/i, "");
+      cleanedName = cleanedName.replace(/[,\s]+v\d+[\d.]*.*$/i, "");
+      cleanedName = cleanedName.replace(/\s*–\s*v?\d.*$/i, "");
+      cleanedName = cleanedName.replace(/\s*–\s*[^–]+$/i, "");
+      cleanedName = cleanedName.replace(/\s*\([^)]*\)/g, "");
+      cleanedName = cleanedName.replace(/[,;:\s]+$/g, "");
       cleanedName = cleanedName.replace(/\s+/g, " ");
 
       return cleanedName.trim();
     }
 
     function getReviewClass(reviewText: string): string {
-      return `steam-card-review-${reviewText.toLowerCase().replace(/\s+/g, "-")}`;
+      return `steam-card-review-${reviewText
+        .toLowerCase()
+        .replace(/\s+/g, "-")}`;
     }
 
     function getMetacriticClass(score: number): string {
@@ -76,10 +74,9 @@ export default defineContentScript({
     function createSteamCard(result: any): HTMLElement {
       if (result) {
         const steamLink = document.createElement("a");
-        steamLink.href = `https://store.steampowered.com/app/${result.id}`;
+        steamLink.href = `steam://store/${result.id}`;
         steamLink.className = "steam-card";
         steamLink.dataset.processing = "true";
-        steamLink.target = "_blank";
 
         let priceHTML = "";
         if (options.showPrice) {
@@ -88,11 +85,16 @@ export default defineContentScript({
               <span class="steam-card-free">FREE</span>`;
           } else if (result.price?.final) {
             const finalPrice = `$${(result.price.final / 100).toFixed(2)}`;
-            const initialPrice = result.price.initial ? (result.price.initial / 100).toFixed(2) : null;
-            const isOnSale = initialPrice && result.price.initial > result.price.final;
+            const initialPrice = result.price.initial
+              ? (result.price.initial / 100).toFixed(2)
+              : null;
+            const isOnSale =
+              initialPrice && result.price.initial > result.price.final;
 
             if (isOnSale) {
-              const discount = Math.round((1 - result.price.final / result.price.initial) * 100);
+              const discount = Math.round(
+                (1 - result.price.final / result.price.initial) * 100
+              );
               priceHTML = `<span class="steam-card-separator">•</span>
                 <span class="steam-card-discount">-${discount}%</span>
                 <span class="steam-card-price-original">$${initialPrice}</span>
@@ -108,25 +110,33 @@ export default defineContentScript({
         let reviewHTML = "";
         if (options.showReviews) {
           const reviewText = result.reviewText || "";
-          const reviewCount = result.reviews ? `(${result.reviews.toLocaleString()})` : "";
+          const reviewCount = result.reviews
+            ? `(${result.reviews.toLocaleString()})`
+            : "";
           reviewHTML = reviewText
             ? `<span class="steam-card-separator">•</span>
-               <span class="steam-card-review ${getReviewClass(reviewText)}">${reviewText}</span>
+               <span class="steam-card-review ${getReviewClass(
+                 reviewText
+               )}">${reviewText}</span>
                <span class="steam-card-review-count">${reviewCount}</span>`
             : "";
         }
 
         // Metacritic score
-        const metacriticHTML = options.showMetacritic && result.metacritic
-          ? `<span class="steam-card-separator">•</span>
-             <span class="steam-card-metacritic ${getMetacriticClass(result.metacritic)}">${result.metacritic}</span>`
-          : "";
+        const metacriticHTML =
+          options.showMetacritic && result.metacritic
+            ? `<span class="steam-card-separator">•</span>
+             <span class="steam-card-metacritic ${getMetacriticClass(
+               result.metacritic
+             )}">${result.metacritic}</span>`
+            : "";
 
         // Release date
-        const releaseDateHTML = options.showReleaseDate && result.releaseDate
-          ? `<span class="steam-card-separator">•</span>
+        const releaseDateHTML =
+          options.showReleaseDate && result.releaseDate
+            ? `<span class="steam-card-separator">•</span>
              <span class="steam-card-release">${result.releaseDate}</span>`
-          : "";
+            : "";
 
         steamLink.innerHTML = `<span class="steam-card-text">View on Steam</span>
           ${priceHTML}
@@ -161,7 +171,10 @@ export default defineContentScript({
       return notFoundCard;
     }
 
-    function replaceLoadingWithElement(parentElement: Element, newElement: HTMLElement) {
+    function replaceLoadingWithElement(
+      parentElement: Element,
+      newElement: HTMLElement
+    ) {
       const loadingEl = parentElement.querySelector(".steam-card-loading");
 
       if (loadingEl) {
@@ -190,10 +203,12 @@ export default defineContentScript({
         text.toLowerCase().includes("installation"),
         text.toLowerCase().includes("updates digest"),
         text.toLowerCase().includes("updated"),
-        text.toLowerCase().includes("upcoming repacks")
+        text.toLowerCase().includes("upcoming repacks"),
+        text.toLowerCase().includes("fitgirl"),
+        text.toLowerCase().includes("in service"),
       ];
 
-      if (skipConditions.some(condition => condition)) {
+      if (skipConditions.some((condition) => condition)) {
         return;
       }
 
@@ -202,10 +217,11 @@ export default defineContentScript({
 
       const siblings = Array.from(parent.children);
 
-      const alreadyProcessed = siblings.some(sibling =>
-        sibling.classList.contains("steam-card") ||
-        sibling.classList.contains("steam-card-loading") ||
-        (sibling as HTMLElement).dataset?.processing === "true"
+      const alreadyProcessed = siblings.some(
+        (sibling) =>
+          sibling.classList.contains("steam-card") ||
+          sibling.classList.contains("steam-card-loading") ||
+          (sibling as HTMLElement).dataset?.processing === "true"
       );
 
       if (alreadyProcessed) {
@@ -214,17 +230,28 @@ export default defineContentScript({
 
       const articleEl = parent.closest("article");
       if (articleEl) {
-        const existingCards = articleEl.querySelectorAll(".steam-card, .steam-card-loading");
+        const existingCards = articleEl.querySelectorAll(
+          ".steam-card, .steam-card-loading"
+        );
         if (existingCards.length > 0) {
+          return;
+        }
+
+        const categoryLink = articleEl.querySelector('a[rel="category tag"]');
+        if (categoryLink?.textContent?.toLowerCase() === "uncategorized") {
           return;
         }
       }
 
-      for (const loader of siblings.filter(sibling => sibling.classList.contains("steam-card-loading"))) {
+      for (const loader of siblings.filter((sibling) =>
+        sibling.classList.contains("steam-card-loading")
+      )) {
         loader.remove();
       }
 
-      const loadingId = `loading-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const loadingId = `loading-${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
       const loadingEl = document.createElement("div");
       loadingEl.id = loadingId;
       loadingEl.className = "steam-card-loading";
@@ -235,9 +262,14 @@ export default defineContentScript({
       const gameName = extractGameName(element.textContent?.trim() || "");
 
       try {
-        const response = await browser.runtime.sendMessage({ action: "searchGame", gameName });
+        const response = await browser.runtime.sendMessage({
+          action: "searchGame",
+          gameName,
+        });
 
-        const card = createSteamCard(response?.success ? response.result : null);
+        const card = createSteamCard(
+          response?.success ? response.result : null
+        );
         replaceLoadingWithElement(parent, card);
       } catch (error) {
         console.error("Failed to process game:", gameName, error);
@@ -252,20 +284,27 @@ export default defineContentScript({
     }
 
     function findAndProcessGames() {
-      const mainTitles = document.querySelectorAll(".entry-title > a:first-of-type:not(:has(~ .steam-card)):not(.steam-card-skipped)");
-      const detailTitle = document.querySelector("article.type-post > .entry-header .entry-title:not(:has(~ .steam-card))");
+      const mainTitles = document.querySelectorAll(
+        ".entry-title > a:first-of-type:not(:has(~ .steam-card)):not(.steam-card-skipped)"
+      );
+      const detailTitle = document.querySelector(
+        "article.type-post > .entry-header .entry-title:not(:has(~ .steam-card))"
+      );
 
-      const observer = new IntersectionObserver((entries, obs) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            processElement(entry.target);
-            obs.unobserve(entry.target);
+      const observer = new IntersectionObserver(
+        (entries, obs) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              processElement(entry.target);
+              obs.unobserve(entry.target);
+            }
           }
+        },
+        {
+          rootMargin: "4000px",
+          threshold: 0.1,
         }
-      }, {
-        rootMargin: "4000px",
-        threshold: 0.1
-      });
+      );
 
       for (const title of mainTitles) {
         observer.observe(title);
@@ -281,5 +320,5 @@ export default defineContentScript({
     } else {
       findAndProcessGames();
     }
-  }
+  },
 });
