@@ -53,10 +53,11 @@ export default defineBackground(() => {
   interface GameData {
     id: number;
     name: string;
-    price?: { final: number };
+    price?: { final: number; initial?: number };
     reviews?: number;
     reviewScore?: number;
     reviewText?: string;
+    releaseDate?: string;
   }
 
   async function enrichGameWithReviews(game: GameData): Promise<GameData> {
@@ -66,6 +67,11 @@ export default defineBackground(() => {
       if (details.release_date?.coming_soon) {
         game.reviewText = "Coming Soon";
         return game;
+      }
+
+      // Extract release date
+      if (details.release_date?.date) {
+        game.releaseDate = details.release_date.date;
       }
 
       // Fetch reviews from /appreviews/ API - this gives us Steam's exact review_score_desc

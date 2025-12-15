@@ -77,9 +77,16 @@ export default defineContentScript({
              <span class="steam-card-review-count">${reviewCount}</span>`
           : "";
 
+        // Release date
+        const releaseDateHTML = result.releaseDate
+          ? `<span class="steam-card-separator">•</span>
+             <span class="steam-card-release">${result.releaseDate}</span>`
+          : "";
+
         steamLink.innerHTML = `<span class="steam-card-text">View on Steam</span>
           ${priceHTML}
           ${reviewHTML}
+          ${releaseDateHTML}
         `;
 
         return steamLink;
