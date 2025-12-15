@@ -58,6 +58,8 @@ export default defineBackground(() => {
     reviewScore?: number;
     reviewText?: string;
     releaseDate?: string;
+    metacritic?: number;
+    isFree?: boolean;
   }
 
   async function enrichGameWithReviews(game: GameData): Promise<GameData> {
@@ -72,6 +74,16 @@ export default defineBackground(() => {
       // Extract release date
       if (details.release_date?.date) {
         game.releaseDate = details.release_date.date;
+      }
+
+      // Extract metacritic score
+      if (details.metacritic?.score) {
+        game.metacritic = details.metacritic.score;
+      }
+
+      // Check if free to play
+      if (details.is_free) {
+        game.isFree = true;
       }
 
       // Fetch reviews from /appreviews/ API - this gives us Steam's exact review_score_desc

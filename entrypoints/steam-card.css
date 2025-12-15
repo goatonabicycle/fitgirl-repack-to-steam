@@ -26,21 +26,25 @@
 }
 
 .steam-card-db {
-  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
   background: #171a21;
   border-radius: 4px;
   color: #66c0f4 !important;
   text-decoration: none !important;
   border: 1px solid #2a475e;
   transition: all 0.2s ease;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .steam-card-db:hover {
   background: #2a475e;
   border-color: #66c0f4;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .steam-card:hover {
@@ -114,6 +118,33 @@
 .steam-card-review-very-negative,
 .steam-card-review-overwhelmingly-negative {
   color: #ff4444;
+}
+
+.steam-card-free {
+  color: #a4d007;
+  font-weight: 600;
+}
+
+.steam-card-metacritic {
+  font-size: 0.85em;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.steam-card-metacritic-good {
+  background: #66cc33;
+  color: #ffffff;
+}
+
+.steam-card-metacritic-mixed {
+  background: #ffcc33;
+  color: #000000;
+}
+
+.steam-card-metacritic-bad {
+  background: #ff0000;
+  color: #ffffff;
 }
 
 .steam-card-not-found {
