@@ -4,18 +4,17 @@
   "description": "This links FitGirl Repacks entries to their Steam pages. Maybe you should buy this one?",
   "type": "module",
   "scripts": {
-    "build": "extension build",
-    "buildff": "extension build --browser firefox",
-    "dev": "extension dev",
-    "devff": "extension dev --browser firefox",
-    "start": "extension start",
+    "dev": "wxt",
+    "dev:firefox": "wxt --browser firefox",
+    "build": "wxt build",
+    "build:firefox": "wxt build --browser firefox",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip --browser firefox",
     "format": "biome format --write .",
     "lint": "biome lint ."
   },
-  "dependencies": {
-    "extension": "^2.1.3"
-  },
   "devDependencies": {
-    "@biomejs/biome": "latest"
+    "@biomejs/biome": "latest",
+    "wxt": "^0.19.0"
   }
 }
