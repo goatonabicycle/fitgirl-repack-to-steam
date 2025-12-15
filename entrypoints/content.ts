@@ -85,29 +85,30 @@ export default defineContentScript({
           link.target = "_blank";
         }
 
-        let info = "Steam";
+        const parts: string[] = [];
         if (result.reviewText && result.reviewText !== "No user reviews") {
-          info = result.reviewText;
+          parts.push(result.reviewText);
         }
         if (result.price?.final) {
           const currency = result.price.currency || "USD";
           const price = new Intl.NumberFormat(undefined, {
             style: "currency",
             currency: currency,
+            maximumFractionDigits: 0,
           }).format(result.price.final / 100);
-          info += ` · ${price}`;
+          parts.push(price);
         } else if (result.isFree) {
-          info += " · Free";
+          parts.push("Free");
         }
 
-        link.textContent = `[${info}]`;
+        link.textContent = parts.length > 0 ? parts.join(" / ") : "Steam";
         link.title = `View ${result.name} on Steam`;
         return link;
       }
 
       const notFound = document.createElement("span");
       notFound.className = "steam-inline-not-found";
-      notFound.textContent = "[Not on Steam]";
+      notFound.textContent = "?";
       return notFound;
     }
 
@@ -335,6 +336,37 @@ export default defineContentScript({
       }
     }
 
+    async function processUpcomingRepack(span: Element) {
+      if (span.querySelector(".steam-inline-link, .steam-inline-not-found, .steam-inline-loading")) {
+        return;
+      }
+
+      const text = span.textContent?.trim() || "";
+      if (!text || text.length < 3) return;
+
+      const gameName = extractGameName(text.replace(/^⇢\s*/, ""));
+      if (!gameName) return;
+
+      const loading = document.createElement("span");
+      loading.className = "steam-inline-loading";
+      loading.textContent = "..";
+      span.appendChild(loading);
+
+      try {
+        const response = await browser.runtime.sendMessage({
+          action: "searchGame",
+          gameName,
+          fast: true,
+        });
+
+        const link = createInlineSteamLink(response?.success ? response.result : null);
+        loading.replaceWith(link);
+      } catch (error) {
+        console.error("Failed to process upcoming:", gameName, error);
+        loading.remove();
+      }
+    }
+
     function findAndProcessGames() {
       const mainTitles = document.querySelectorAll(
         ".entry-title > a:first-of-type:not(:has(~ .steam-card)):not(.steam-card-skipped)"
@@ -364,6 +396,14 @@ export default defineContentScript({
 
       if (detailTitle) {
         processElement(detailTitle);
+      }
+
+      // Process upcoming repacks - green spans with arrow prefix
+      const upcomingSpans = document.querySelectorAll(
+        'article.category-uncategorized .entry-content span[style*="color: #339966"]'
+      );
+      for (const span of upcomingSpans) {
+        processUpcomingRepack(span);
       }
     }
 

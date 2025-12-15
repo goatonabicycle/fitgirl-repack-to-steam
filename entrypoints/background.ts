@@ -1,16 +1,17 @@
 export default defineBackground(() => {
   const CACHE_EXPIRATION = 5 * 24 * 60 * 60 * 1000; // 5 days
   const API_DELAY = 1000;
+  const API_DELAY_FAST = 500;
   const MAX_RETRIES = 3;
 
   let lastApiCall = 0;
 
-  async function rateLimitedFetch(url: string, retryCount = 0): Promise<Response> {
+  async function rateLimitedFetch(url: string, retryCount = 0, delay = API_DELAY): Promise<Response> {
     const now = Date.now();
     const timeSinceLastCall = now - lastApiCall;
 
-    if (timeSinceLastCall < API_DELAY) {
-      await new Promise(resolve => setTimeout(resolve, API_DELAY - timeSinceLastCall));
+    if (timeSinceLastCall < delay) {
+      await new Promise(resolve => setTimeout(resolve, delay - timeSinceLastCall));
     }
 
     try {
@@ -18,15 +19,15 @@ export default defineBackground(() => {
       const response = await fetch(url);
 
       if (response.status === 429 && retryCount < MAX_RETRIES) {
-        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * API_DELAY));
-        return rateLimitedFetch(url, retryCount + 1);
+        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * delay));
+        return rateLimitedFetch(url, retryCount + 1, delay);
       }
 
       return response;
     } catch (error) {
       if (retryCount < MAX_RETRIES) {
-        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * API_DELAY));
-        return rateLimitedFetch(url, retryCount + 1);
+        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * delay));
+        return rateLimitedFetch(url, retryCount + 1, delay);
       }
       throw error;
     }
@@ -270,13 +271,13 @@ export default defineBackground(() => {
     return null;
   }
 
-  async function trySearch(searchTerm: string) {
+  async function trySearch(searchTerm: string, delay = API_DELAY) {
     const searchUrl = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(searchTerm)}&l=english&cc=US`;
     console.log("Searching Steam for:", searchTerm);
     console.log("Search URL:", searchUrl);
 
     try {
-      const response = await rateLimitedFetch(searchUrl);
+      const response = await rateLimitedFetch(searchUrl, 0, delay);
       if (!response.ok) {
         console.error("Steam API error:", response.status);
         return null;
@@ -333,8 +334,9 @@ export default defineBackground(() => {
     }
   }
 
-  async function searchSteam(gameName: string): Promise<GameData | null> {
-    console.log("Received game name:", gameName);
+  async function searchSteam(gameName: string, fast = false): Promise<GameData | null> {
+    const delay = fast ? API_DELAY_FAST : API_DELAY;
+    console.log("Received game name:", gameName, fast ? "(fast mode)" : "");
 
     const cacheKey = `game:${gameName.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
     console.log("Using cache key:", cacheKey);
@@ -342,7 +344,7 @@ export default defineBackground(() => {
     const cached = await getCachedGame(cacheKey);
     if (cached) return cached;
 
-    let data = await trySearch(gameName);
+    let data = await trySearch(gameName, delay);
 
     if ((!data || !data.items || data.items.length === 0) &&
       (gameName.includes("–") || gameName.includes(" - "))) {
@@ -355,13 +357,13 @@ export default defineBackground(() => {
       }
 
       console.log("No results with full name, trying base name:", baseName);
-      data = await trySearch(baseName);
+      data = await trySearch(baseName, delay);
     }
 
     if ((!data || !data.items || data.items.length === 0) && gameName.includes(":")) {
       const baseName = gameName.split(":")[0].trim();
       console.log("No results, trying name before colon:", baseName);
-      data = await trySearch(baseName);
+      data = await trySearch(baseName, delay);
     }
 
     if (!data || !data.items || data.items.length === 0) {
@@ -416,9 +418,9 @@ export default defineBackground(() => {
     console.log("Background script received message:", request);
 
     if (request.action === "searchGame") {
-      console.log("Starting Steam search for:", request.gameName);
+      console.log("Starting Steam search for:", request.gameName, request.fast ? "(fast)" : "");
 
-      searchSteam(request.gameName)
+      searchSteam(request.gameName, request.fast || false)
         .then(result => {
           console.log("Final result for:", request.gameName, result);
           sendResponse({ success: true, result });
