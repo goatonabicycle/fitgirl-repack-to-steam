@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Simple flat background -->
+  <rect x="4" y="4" width="120" height="120" rx="16" ry="16" fill="#1b2838"/>
+
+  <!-- F letter -->
+  <text x="20" y="82" font-family="Arial, sans-serif" font-size="52" font-weight="bold" fill="#66c0f4">F</text>
+
+  <!-- Heart -->
+  <path d="M64 48 C64 40, 56 36, 50 40 C44 44, 44 52, 50 58 L64 72 L78 58 C84 52, 84 44, 78 40 C72 36, 64 40, 64 48" fill="#a4d007"/>
+
+  <!-- S letter -->
+  <text x="74" y="82" font-family="Arial, sans-serif" font-size="52" font-weight="bold" fill="#66c0f4">S</text>
+</svg>

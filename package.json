@@ -11,10 +11,12 @@
     "zip": "wxt zip",
     "zip:firefox": "wxt zip --browser firefox",
     "format": "biome format --write .",
-    "lint": "biome lint ."
+    "lint": "biome lint .",
+    "icons": "node scripts/generate-icons.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "latest",
+    "sharp": "^0.34.5",
     "wxt": "^0.19.0"
   }
 }
