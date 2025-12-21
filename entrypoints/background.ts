@@ -38,7 +38,6 @@ export default defineBackground(() => {
     const storeResponse = await rateLimitedFetch(storeUrl);
 
     if (!storeResponse.ok) {
-      console.error("Store API error:", storeResponse.status, storeResponse.statusText);
       throw new Error(`Store API failed: ${storeResponse.status}`);
     }
 
@@ -118,9 +117,8 @@ export default defineBackground(() => {
       }
 
       return game;
-    } catch (err: any) {
-      console.error("Error fetching reviews:", err.message);
-      game.reviewText = err.message;
+    } catch {
+      game.reviewText = "Error loading details";
       return game;
     }
   }
@@ -135,20 +133,15 @@ export default defineBackground(() => {
   function findBestMatch(gameName: string, results: SteamSearchResult[]): SteamSearchResult | null {
     if (!results || results.length === 0) return null;
 
-    console.log("Finding match for:", gameName);
-
     const normalizedSearchName = gameName.toLowerCase()
       .replace(/\s*[–—-]+\s*-*\s*[\d.]+/g, "")
       .replace(/\s+/g, " ")
       .trim();
 
-    console.log("Normalized search name:", normalizedSearchName);
-
     const exactMatch = results.find(game =>
       game.name.toLowerCase() === normalizedSearchName
     );
     if (exactMatch) {
-      console.log("Found exact match:", exactMatch.name);
       return exactMatch;
     }
 
@@ -172,14 +165,11 @@ export default defineBackground(() => {
       baseSearchName = baseSearchName.replace(/\s+-\s+.*$/, "").trim();
     }
 
-    console.log("Base search name:", baseSearchName);
-
     const baseNameMatch = results.find(game =>
       game.name.toLowerCase() === baseSearchName
     );
 
     if (baseNameMatch) {
-      console.log("Found base name match:", baseNameMatch.name);
       return baseNameMatch;
     }
 
@@ -194,15 +184,11 @@ export default defineBackground(() => {
     });
 
     if (strippedMatch) {
-      console.log("Found stripped match:", strippedMatch.name);
       return strippedMatch;
     }
 
     const simplifiedSearchName = normalizedSearchName.replace(/[^a-z0-9\s]/g, "").trim();
     const baseSimplifiedName = baseSearchName.replace(/[^a-z0-9\s]/g, "").trim();
-
-    console.log("Simplified search name:", simplifiedSearchName);
-    console.log("Simplified base name:", baseSimplifiedName);
 
     const partialMatch = results.find(game => {
       const simplifiedGameName = game.name.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
@@ -211,7 +197,6 @@ export default defineBackground(() => {
         simplifiedGameName.includes(baseSimplifiedName) ||
         simplifiedSearchName.includes(simplifiedGameName) ||
         baseSimplifiedName.includes(simplifiedGameName)) {
-        console.log("Found partial match via inclusion:", game.name);
         return true;
       }
 
@@ -227,12 +212,7 @@ export default defineBackground(() => {
 
       const matchPercentage = matchingWords / searchWords.length;
 
-      if (matchPercentage >= 0.6) {
-        console.log("Found partial match via words:", game.name, "matching", matchPercentage);
-        return true;
-      }
-
-      return false;
+      return matchPercentage >= 0.6;
     });
 
     if (partialMatch) return partialMatch;
@@ -240,15 +220,12 @@ export default defineBackground(() => {
     const firstFewWords = baseSearchName.split(/\s+/).slice(0, 3).join(" ");
 
     if (firstFewWords.length > 3 && firstFewWords !== baseSearchName) {
-      console.log("Trying with first few words:", firstFewWords);
-
       const firstWordsMatch = results.find(game => {
         const gName = game.name.toLowerCase();
         return gName.includes(firstFewWords) || firstFewWords.includes(gName);
       });
 
       if (firstWordsMatch) {
-        console.log("Found match using first few words:", firstWordsMatch.name);
         return firstWordsMatch;
       }
     }
@@ -263,29 +240,23 @@ export default defineBackground(() => {
     const intersection = [...searchWordsSet].filter(x => resultWordsSet.has(x));
 
     if (intersection.length > 0) {
-      console.log("Using first result with word overlap:", firstResult.name);
       return firstResult;
     }
 
-    console.log("No reasonable match found");
     return null;
   }
 
   async function trySearch(searchTerm: string, delay = API_DELAY) {
     const searchUrl = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(searchTerm)}&l=english&cc=US`;
-    console.log("Searching Steam for:", searchTerm);
-    console.log("Search URL:", searchUrl);
 
     try {
       const response = await rateLimitedFetch(searchUrl, 0, delay);
       if (!response.ok) {
-        console.error("Steam API error:", response.status);
         return null;
       }
 
       return await response.json();
-    } catch (error: any) {
-      console.error("Search failed:", error.message);
+    } catch {
       return null;
     }
   }
@@ -336,10 +307,7 @@ export default defineBackground(() => {
 
   async function searchSteam(gameName: string, fast = false): Promise<GameData | null> {
     const delay = fast ? API_DELAY_FAST : API_DELAY;
-    console.log("Received game name:", gameName, fast ? "(fast mode)" : "");
-
     const cacheKey = `game:${gameName.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
-    console.log("Using cache key:", cacheKey);
 
     const cached = await getCachedGame(cacheKey);
     if (cached) return cached;
@@ -356,18 +324,15 @@ export default defineBackground(() => {
         baseName = gameName.split(" - ")[0].trim();
       }
 
-      console.log("No results with full name, trying base name:", baseName);
       data = await trySearch(baseName, delay);
     }
 
     if ((!data || !data.items || data.items.length === 0) && gameName.includes(":")) {
       const baseName = gameName.split(":")[0].trim();
-      console.log("No results, trying name before colon:", baseName);
       data = await trySearch(baseName, delay);
     }
 
     if (!data || !data.items || data.items.length === 0) {
-      console.log("No results found for any search attempt");
       await cacheResult(cacheKey, null);
       return null;
     }
@@ -384,14 +349,12 @@ export default defineBackground(() => {
     });
 
     if (games.length === 0) {
-      console.log("No valid games after filtering");
       await cacheResult(cacheKey, null);
       return null;
     }
 
     const matchedGame = findBestMatch(gameName, games);
     if (!matchedGame) {
-      console.log("No match found after best match search");
       await cacheResult(cacheKey, null);
       return null;
     }
@@ -406,27 +369,20 @@ export default defineBackground(() => {
       const enrichedGame = await enrichGameWithReviews(gameData);
       await cacheResult(cacheKey, enrichedGame);
       return enrichedGame;
-    } catch (error: any) {
-      console.error("Review fetch error:", error.message);
+    } catch {
       gameData.reviewText = "Error fetching reviews";
       await cacheResult(cacheKey, gameData);
       return gameData;
     }
   }
 
-  browser.runtime.onMessage.addListener((request: any, sender, sendResponse) => {
-    console.log("Background script received message:", request);
-
+  browser.runtime.onMessage.addListener((request: any, _sender, sendResponse) => {
     if (request.action === "searchGame") {
-      console.log("Starting Steam search for:", request.gameName, request.fast ? "(fast)" : "");
-
       searchSteam(request.gameName, request.fast || false)
         .then(result => {
-          console.log("Final result for:", request.gameName, result);
           sendResponse({ success: true, result });
         })
         .catch(error => {
-          console.error("Steam search error:", error.message);
           sendResponse({ success: false, error: error.message });
         });
       return true;

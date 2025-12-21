@@ -83,6 +83,7 @@ export default defineContentScript({
         link.className = "steam-inline-link";
         if (!options.openInSteamClient) {
           link.target = "_blank";
+          link.rel = "noopener";
         }
 
         const parts: string[] = [];
@@ -122,6 +123,7 @@ export default defineContentScript({
         steamLink.dataset.processing = "true";
         if (!options.openInSteamClient) {
           steamLink.target = "_blank";
+          steamLink.rel = "noopener";
         }
 
         let priceHTML = "";
@@ -210,6 +212,7 @@ export default defineContentScript({
           steamDbLink.href = `https://steamdb.info/app/${result.id}/`;
           steamDbLink.className = "steam-card-db";
           steamDbLink.target = "_blank";
+          steamDbLink.rel = "noopener";
           steamDbLink.textContent = "SteamDB";
           container.appendChild(steamDbLink);
         }
@@ -304,7 +307,7 @@ export default defineContentScript({
 
       const loadingId = `loading-${Date.now()}-${Math.random()
         .toString(36)
-        .substr(2, 9)}`;
+        .substring(2, 11)}`;
       const loadingEl = document.createElement("div");
       loadingEl.id = loadingId;
       loadingEl.className = "steam-card-loading";
@@ -324,9 +327,7 @@ export default defineContentScript({
           response?.success ? response.result : null
         );
         replaceLoadingWithElement(parent, card);
-      } catch (error) {
-        console.error("Failed to process game:", gameName, error);
-
+      } catch {
         const errorCard = document.createElement("div");
         errorCard.className = "steam-card";
         errorCard.dataset.processing = "true";
@@ -361,8 +362,7 @@ export default defineContentScript({
 
         const link = createInlineSteamLink(response?.success ? response.result : null);
         loading.replaceWith(link);
-      } catch (error) {
-        console.error("Failed to process upcoming:", gameName, error);
+      } catch {
         loading.remove();
       }
     }
