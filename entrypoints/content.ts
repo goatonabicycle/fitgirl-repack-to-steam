@@ -1,34 +1,24 @@
 import "./steam-card.css";
-
-interface DisplayOptions {
-  showPrice: boolean;
-  showReviews: boolean;
-  showReleaseDate: boolean;
-  showSteamDb: boolean;
-  showMetacritic: boolean;
-  openInSteamClient: boolean;
-}
-
-const defaultOptions: DisplayOptions = {
-  showPrice: true,
-  showReviews: true,
-  showReleaseDate: true,
-  showSteamDb: true,
-  showMetacritic: true,
-  openInSteamClient: true,
-};
+import {
+  type DisplayOptions,
+  type GameData,
+  type SearchGameResponse,
+  DEFAULT_DISPLAY_OPTIONS,
+  STORAGE_KEYS,
+  MESSAGE_ACTIONS,
+} from "./shared/types";
 
 export default defineContentScript({
   matches: ["*://*.fitgirl-repacks.site/*"],
   runAt: "document_start",
 
   main() {
-    let options: DisplayOptions = { ...defaultOptions };
+    let options: DisplayOptions = { ...DEFAULT_DISPLAY_OPTIONS };
 
     async function loadOptions() {
-      const result = await browser.storage.local.get("displayOptions");
-      const stored = result.displayOptions as Partial<DisplayOptions> | undefined;
-      options = { ...defaultOptions, ...stored };
+      const result = await browser.storage.local.get(STORAGE_KEYS.DISPLAY_OPTIONS);
+      const stored = result[STORAGE_KEYS.DISPLAY_OPTIONS] as Partial<DisplayOptions> | undefined;
+      options = { ...DEFAULT_DISPLAY_OPTIONS, ...stored };
     }
 
     // Load options immediately
@@ -74,7 +64,7 @@ export default defineContentScript({
       return "steam-card-metacritic-bad";
     }
 
-    function createInlineSteamLink(result: any): HTMLElement {
+    function createInlineSteamLink(result: GameData | null): HTMLElement {
       if (result) {
         const link = document.createElement("a");
         link.href = options.openInSteamClient
@@ -113,7 +103,7 @@ export default defineContentScript({
       return notFound;
     }
 
-    function createSteamCard(result: any): HTMLElement {
+    function createSteamCard(result: GameData | null): HTMLElement {
       if (result) {
         const steamLink = document.createElement("a");
         steamLink.href = options.openInSteamClient
@@ -318,14 +308,12 @@ export default defineContentScript({
       const gameName = extractGameName(element.textContent?.trim() || "");
 
       try {
-        const response = await browser.runtime.sendMessage({
-          action: "searchGame",
+        const response: SearchGameResponse = await browser.runtime.sendMessage({
+          action: MESSAGE_ACTIONS.SEARCH_GAME,
           gameName,
         });
 
-        const card = createSteamCard(
-          response?.success ? response.result : null
-        );
+        const card = createSteamCard(response.success ? response.result ?? null : null);
         replaceLoadingWithElement(parent, card);
       } catch {
         const errorCard = document.createElement("div");
@@ -354,13 +342,13 @@ export default defineContentScript({
       span.appendChild(loading);
 
       try {
-        const response = await browser.runtime.sendMessage({
-          action: "searchGame",
+        const response: SearchGameResponse = await browser.runtime.sendMessage({
+          action: MESSAGE_ACTIONS.SEARCH_GAME,
           gameName,
           fast: true,
         });
 
-        const link = createInlineSteamLink(response?.success ? response.result : null);
+        const link = createInlineSteamLink(response.success ? response.result ?? null : null);
         loading.replaceWith(link);
       } catch {
         loading.remove();

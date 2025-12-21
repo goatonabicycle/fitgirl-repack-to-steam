@@ -1,3 +1,10 @@
+import {
+  type GameData,
+  type SearchGameMessage,
+  STORAGE_KEYS,
+  MESSAGE_ACTIONS,
+} from "./shared/types";
+
 export default defineBackground(() => {
   const CACHE_EXPIRATION = 5 * 24 * 60 * 60 * 1000; // 5 days
   const API_DELAY = 1000;
@@ -50,17 +57,6 @@ export default defineBackground(() => {
     return storeData[gameId].data;
   }
 
-  interface GameData {
-    id: number;
-    name: string;
-    price?: { final: number; initial?: number; currency?: string };
-    reviews?: number;
-    reviewScore?: number;
-    reviewText?: string;
-    releaseDate?: string;
-    metacritic?: number;
-    isFree?: boolean;
-  }
 
   async function enrichGameWithReviews(game: GameData): Promise<GameData> {
     try {
@@ -293,7 +289,7 @@ export default defineBackground(() => {
     const keysToRemove: string[] = [];
 
     for (const [key, value] of Object.entries(items)) {
-      if (key.startsWith('game:') && (value as any).timestamp) {
+      if (key.startsWith(STORAGE_KEYS.GAME_PREFIX) && (value as any).timestamp) {
         if (now - (value as any).timestamp > CACHE_EXPIRATION) {
           keysToRemove.push(key);
         }
@@ -307,7 +303,7 @@ export default defineBackground(() => {
 
   async function searchSteam(gameName: string, fast = false): Promise<GameData | null> {
     const delay = fast ? API_DELAY_FAST : API_DELAY;
-    const cacheKey = `game:${gameName.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+    const cacheKey = `${STORAGE_KEYS.GAME_PREFIX}${gameName.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
 
     const cached = await getCachedGame(cacheKey);
     if (cached) return cached;
@@ -376,8 +372,8 @@ export default defineBackground(() => {
     }
   }
 
-  browser.runtime.onMessage.addListener((request: any, _sender, sendResponse) => {
-    if (request.action === "searchGame") {
+  browser.runtime.onMessage.addListener((request: SearchGameMessage, _sender, sendResponse) => {
+    if (request.action === MESSAGE_ACTIONS.SEARCH_GAME) {
       searchSteam(request.gameName, request.fast || false)
         .then(result => {
           sendResponse({ success: true, result });

@@ -1,27 +1,13 @@
-const OPTIONS_KEY = 'displayOptions';
-
-interface DisplayOptions {
-  showPrice: boolean;
-  showReviews: boolean;
-  showReleaseDate: boolean;
-  showSteamDb: boolean;
-  showMetacritic: boolean;
-  openInSteamClient: boolean;
-}
-
-const defaults: DisplayOptions = {
-  showPrice: true,
-  showReviews: true,
-  showReleaseDate: true,
-  showSteamDb: true,
-  showMetacritic: true,
-  openInSteamClient: true
-};
+import {
+  type DisplayOptions,
+  DEFAULT_DISPLAY_OPTIONS,
+  STORAGE_KEYS,
+} from "../shared/types";
 
 async function loadOptions() {
-  const result = await browser.storage.local.get(OPTIONS_KEY);
-  const stored = result[OPTIONS_KEY] as Partial<DisplayOptions> | undefined;
-  const options: DisplayOptions = { ...defaults, ...stored };
+  const result = await browser.storage.local.get(STORAGE_KEYS.DISPLAY_OPTIONS);
+  const stored = result[STORAGE_KEYS.DISPLAY_OPTIONS] as Partial<DisplayOptions> | undefined;
+  const options: DisplayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...stored };
 
   (document.getElementById('showPrice') as HTMLInputElement).checked = options.showPrice;
   (document.getElementById('showReviews') as HTMLInputElement).checked = options.showReviews;
@@ -41,7 +27,7 @@ async function saveOptions() {
     openInSteamClient: (document.getElementById('openInSteamClient') as HTMLInputElement).checked
   };
 
-  await browser.storage.local.set({ [OPTIONS_KEY]: options });
+  await browser.storage.local.set({ [STORAGE_KEYS.DISPLAY_OPTIONS]: options });
 
   const saved = document.getElementById('saved')!;
   saved.classList.add('visible');
