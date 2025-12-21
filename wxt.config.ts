@@ -15,7 +15,6 @@ export default defineConfig({
       128: 'icon-128.png'
     },
     host_permissions: [
-      '*://*.fitgirl-repacks.site/*',
       '*://*.steampowered.com/*'
     ],
     permissions: ['storage']
