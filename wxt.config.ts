@@ -18,6 +18,6 @@ export default defineConfig({
       '*://*.fitgirl-repacks.site/*',
       '*://*.steampowered.com/*'
     ],
-    permissions: ['storage', 'activeTab']
+    permissions: ['storage']
   }
 });

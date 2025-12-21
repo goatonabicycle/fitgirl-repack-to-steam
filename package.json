@@ -1,6 +1,6 @@
 {
   "name": "fitgirl-repack-to-steam",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "This links FitGirl Repacks entries to their Steam pages. Maybe you should buy this one?",
   "type": "module",
   "scripts": {
