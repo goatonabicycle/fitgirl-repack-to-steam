@@ -1,6 +1,8 @@
 import {
   type GameData,
   type SearchGameMessage,
+  type CacheEntry,
+  type CacheStatus,
   STORAGE_KEYS,
   MESSAGE_ACTIONS,
 } from "./shared/types";
@@ -56,7 +58,6 @@ export default defineBackground(() => {
 
     return storeData[gameId].data;
   }
-
 
   async function enrichGameWithReviews(game: GameData): Promise<GameData> {
     try {
@@ -257,25 +258,26 @@ export default defineBackground(() => {
     }
   }
 
-  async function getCachedGame(key: string): Promise<GameData | null> {
+  async function getCachedGame(key: string): Promise<{ data: GameData | null; status: CacheStatus } | null> {
     const result = await browser.storage.local.get([key]);
     if (!result[key]) {
       return null;
     }
 
-    const entry = result[key];
+    const entry = result[key] as CacheEntry;
 
     if (Date.now() - entry.timestamp > CACHE_EXPIRATION) {
       await browser.storage.local.remove([key]);
       return null;
     }
 
-    return entry.data;
+    return { data: entry.data, status: entry.status };
   }
 
-  async function cacheResult(key: string, data: GameData | null) {
-    const entry = {
+  async function cacheResult(key: string, data: GameData | null, status: CacheStatus) {
+    const entry: CacheEntry = {
       data,
+      status,
       timestamp: Date.now()
     };
 
@@ -289,8 +291,9 @@ export default defineBackground(() => {
     const keysToRemove: string[] = [];
 
     for (const [key, value] of Object.entries(items)) {
-      if (key.startsWith(STORAGE_KEYS.GAME_PREFIX) && (value as any).timestamp) {
-        if (now - (value as any).timestamp > CACHE_EXPIRATION) {
+      const entry = value as CacheEntry;
+      if (key.startsWith(STORAGE_KEYS.GAME_PREFIX) && entry.timestamp) {
+        if (now - entry.timestamp > CACHE_EXPIRATION) {
           keysToRemove.push(key);
         }
       }
@@ -306,7 +309,10 @@ export default defineBackground(() => {
     const cacheKey = `${STORAGE_KEYS.GAME_PREFIX}${gameName.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
 
     const cached = await getCachedGame(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      // Only return cached result if it was a definitive "not found" - don't cache errors
+      return cached.data;
+    }
 
     let data = await trySearch(gameName, delay);
 
@@ -329,7 +335,7 @@ export default defineBackground(() => {
     }
 
     if (!data || !data.items || data.items.length === 0) {
-      await cacheResult(cacheKey, null);
+      await cacheResult(cacheKey, null, "not_found");
       return null;
     }
 
@@ -345,13 +351,13 @@ export default defineBackground(() => {
     });
 
     if (games.length === 0) {
-      await cacheResult(cacheKey, null);
+      await cacheResult(cacheKey, null, "not_found");
       return null;
     }
 
     const matchedGame = findBestMatch(gameName, games);
     if (!matchedGame) {
-      await cacheResult(cacheKey, null);
+      await cacheResult(cacheKey, null, "not_found");
       return null;
     }
 
@@ -363,11 +369,11 @@ export default defineBackground(() => {
 
     try {
       const enrichedGame = await enrichGameWithReviews(gameData);
-      await cacheResult(cacheKey, enrichedGame);
+      await cacheResult(cacheKey, enrichedGame, "found");
       return enrichedGame;
     } catch {
+      // Don't cache errors - allow retry on next visit
       gameData.reviewText = "Error fetching reviews";
-      await cacheResult(cacheKey, gameData);
       return gameData;
     }
   }

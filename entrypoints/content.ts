@@ -116,19 +116,29 @@ export default defineContentScript({
           steamLink.rel = "noopener";
         }
 
-        let priceHTML = "";
+        const createSpan = (className: string, text: string) => {
+          const span = document.createElement("span");
+          span.className = className;
+          span.textContent = text;
+          return span;
+        };
+
+        const addSeparator = () => steamLink.appendChild(createSpan("steam-card-separator", "•"));
+
+        steamLink.appendChild(createSpan("steam-card-text", "View on Steam"));
+
         if (options.showPrice) {
           if (result.isFree) {
-            priceHTML = `<span class="steam-card-separator">•</span>
-              <span class="steam-card-free">FREE</span>`;
+            addSeparator();
+            steamLink.appendChild(createSpan("steam-card-free", "FREE"));
           } else if (result.price?.final) {
             const currency = result.price.currency || "USD";
-            const formatPrice = (cents: number) => {
-              return new Intl.NumberFormat(undefined, {
+            const formatPrice = (cents: number) =>
+              new Intl.NumberFormat(undefined, {
                 style: "currency",
                 currency: currency,
               }).format(cents / 100);
-            };
+
             const finalPrice = formatPrice(result.price.final);
             const initialPrice = result.price.initial
               ? formatPrice(result.price.initial)
@@ -136,59 +146,35 @@ export default defineContentScript({
             const isOnSale =
               initialPrice && result.price.initial > result.price.final;
 
+            addSeparator();
             if (isOnSale) {
               const discount = Math.round(
                 (1 - result.price.final / result.price.initial) * 100
               );
-              priceHTML = `<span class="steam-card-separator">•</span>
-                <span class="steam-card-discount">-${discount}%</span>
-                <span class="steam-card-price-original">${initialPrice}</span>
-                <span class="steam-card-price">${finalPrice}</span>`;
-            } else {
-              priceHTML = `<span class="steam-card-separator">•</span>
-                <span class="steam-card-price">${finalPrice}</span>`;
+              steamLink.appendChild(createSpan("steam-card-discount", `-${discount}%`));
+              steamLink.appendChild(createSpan("steam-card-price-original", initialPrice));
             }
+            steamLink.appendChild(createSpan("steam-card-price", finalPrice));
           }
         }
 
-        // Reviews - using Steam's exact review_score_desc from the API
-        let reviewHTML = "";
-        if (options.showReviews) {
-          const reviewText = result.reviewText || "";
-          const reviewCount = result.reviews
-            ? `(${result.reviews.toLocaleString()})`
-            : "";
-          reviewHTML = reviewText
-            ? `<span class="steam-card-separator">•</span>
-               <span class="steam-card-review ${getReviewClass(
-                 reviewText
-               )}">${reviewText}</span>
-               <span class="steam-card-review-count">${reviewCount}</span>`
-            : "";
+        if (options.showReviews && result.reviewText) {
+          addSeparator();
+          steamLink.appendChild(createSpan(`steam-card-review ${getReviewClass(result.reviewText)}`, result.reviewText));
+          if (result.reviews) {
+            steamLink.appendChild(createSpan("steam-card-review-count", `(${result.reviews.toLocaleString()})`));
+          }
         }
 
-        // Metacritic score
-        const metacriticHTML =
-          options.showMetacritic && result.metacritic
-            ? `<span class="steam-card-separator">•</span>
-             <span class="steam-card-metacritic ${getMetacriticClass(
-               result.metacritic
-             )}">${result.metacritic}</span>`
-            : "";
+        if (options.showMetacritic && result.metacritic) {
+          addSeparator();
+          steamLink.appendChild(createSpan(`steam-card-metacritic ${getMetacriticClass(result.metacritic)}`, String(result.metacritic)));
+        }
 
-        // Release date
-        const releaseDateHTML =
-          options.showReleaseDate && result.releaseDate
-            ? `<span class="steam-card-separator">•</span>
-             <span class="steam-card-release">${result.releaseDate}</span>`
-            : "";
-
-        steamLink.innerHTML = `<span class="steam-card-text">View on Steam</span>
-          ${priceHTML}
-          ${reviewHTML}
-          ${metacriticHTML}
-          ${releaseDateHTML}
-        `;
+        if (options.showReleaseDate && result.releaseDate) {
+          addSeparator();
+          steamLink.appendChild(createSpan("steam-card-release", result.releaseDate));
+        }
 
         // Create container for both links
         const container = document.createElement("div");
@@ -213,7 +199,10 @@ export default defineContentScript({
       const notFoundCard = document.createElement("div");
       notFoundCard.className = "steam-card steam-card-not-found";
       notFoundCard.dataset.processing = "true";
-      notFoundCard.innerHTML = `<span class="steam-card-text">Not found on Steam</span>`;
+      const notFoundText = document.createElement("span");
+      notFoundText.className = "steam-card-text";
+      notFoundText.textContent = "Not found on Steam";
+      notFoundCard.appendChild(notFoundText);
       return notFoundCard;
     }
 
@@ -295,11 +284,7 @@ export default defineContentScript({
         loader.remove();
       }
 
-      const loadingId = `loading-${Date.now()}-${Math.random()
-        .toString(36)
-        .substring(2, 11)}`;
       const loadingEl = document.createElement("div");
-      loadingEl.id = loadingId;
       loadingEl.className = "steam-card-loading";
       loadingEl.dataset.processing = "true";
       loadingEl.textContent = "Loading Steam info...";

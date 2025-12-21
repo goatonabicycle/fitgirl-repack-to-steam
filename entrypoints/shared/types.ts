@@ -28,6 +28,15 @@ export interface GameData {
   isFree?: boolean;
 }
 
+// Cache entry states
+export type CacheStatus = "found" | "not_found";
+
+export interface CacheEntry {
+  data: GameData | null;
+  status: CacheStatus;
+  timestamp: number;
+}
+
 // Storage keys
 export const STORAGE_KEYS = {
   DISPLAY_OPTIONS: "displayOptions",
