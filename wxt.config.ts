@@ -5,8 +5,8 @@ export default defineConfig({
     startUrls: ['https://fitgirl-repacks.site/']
   },
   manifest: {
-    name: 'Fitgirl Repack to Steam',
-    short_name: 'FGR-to-Steam',
+    name: 'FitGirl Steam Lookup',
+    short_name: 'FG Steam Lookup',
     description: 'See if a game is worth buying! Adds Steam links and overall review ratings (from all languages) to FitGirl Repacks listings.',
     icons: {
       16: 'icon-16.png',

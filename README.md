@@ -1,4 +1,4 @@
-# FitGirl Repack to Steam
+# FitGirl Steam Lookup
 
 Adds Steam links with prices, review scores, and other useful info directly to FitGirl Repacks game listings.
 
