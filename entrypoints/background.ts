@@ -14,6 +14,7 @@ export default defineBackground(() => {
   const MAX_RETRIES = 3;
 
   let lastApiCall = 0;
+  let cacheCleanedThisSession = false;
 
   async function rateLimitedFetch(url: string, retryCount = 0, delay = API_DELAY): Promise<Response> {
     const now = Date.now();
@@ -286,6 +287,9 @@ export default defineBackground(() => {
   }
 
   async function cleanupOldCache() {
+    if (cacheCleanedThisSession) return;
+    cacheCleanedThisSession = true;
+
     const items = await browser.storage.local.get(null);
     const now = Date.now();
     const keysToRemove: string[] = [];

@@ -12,17 +12,21 @@ export default defineContentScript({
   matches: ["*://*.fitgirl-repacks.site/*"],
   runAt: "document_start",
 
-  main() {
+  async main() {
     let options: DisplayOptions = { ...DEFAULT_DISPLAY_OPTIONS };
 
     async function loadOptions() {
-      const result = await browser.storage.local.get(STORAGE_KEYS.DISPLAY_OPTIONS);
-      const stored = result[STORAGE_KEYS.DISPLAY_OPTIONS] as Partial<DisplayOptions> | undefined;
+      const result = await browser.storage.local.get(
+        STORAGE_KEYS.DISPLAY_OPTIONS
+      );
+      const stored = result[STORAGE_KEYS.DISPLAY_OPTIONS] as
+        | Partial<DisplayOptions>
+        | undefined;
       options = { ...DEFAULT_DISPLAY_OPTIONS, ...stored };
     }
 
-    // Load options immediately
-    loadOptions();
+    await loadOptions();
+
     function extractGameName(text: string): string {
       let cleanedName = text;
 
@@ -123,7 +127,8 @@ export default defineContentScript({
           return span;
         };
 
-        const addSeparator = () => steamLink.appendChild(createSpan("steam-card-separator", "•"));
+        const addSeparator = () =>
+          steamLink.appendChild(createSpan("steam-card-separator", "•"));
 
         steamLink.appendChild(createSpan("steam-card-text", "View on Steam"));
 
@@ -151,8 +156,12 @@ export default defineContentScript({
               const discount = Math.round(
                 (1 - result.price.final / result.price.initial) * 100
               );
-              steamLink.appendChild(createSpan("steam-card-discount", `-${discount}%`));
-              steamLink.appendChild(createSpan("steam-card-price-original", initialPrice));
+              steamLink.appendChild(
+                createSpan("steam-card-discount", `-${discount}%`)
+              );
+              steamLink.appendChild(
+                createSpan("steam-card-price-original", initialPrice)
+              );
             }
             steamLink.appendChild(createSpan("steam-card-price", finalPrice));
           }
@@ -160,20 +169,37 @@ export default defineContentScript({
 
         if (options.showReviews && result.reviewText) {
           addSeparator();
-          steamLink.appendChild(createSpan(`steam-card-review ${getReviewClass(result.reviewText)}`, result.reviewText));
+          steamLink.appendChild(
+            createSpan(
+              `steam-card-review ${getReviewClass(result.reviewText)}`,
+              result.reviewText
+            )
+          );
           if (result.reviews) {
-            steamLink.appendChild(createSpan("steam-card-review-count", `(${result.reviews.toLocaleString()})`));
+            steamLink.appendChild(
+              createSpan(
+                "steam-card-review-count",
+                `(${result.reviews.toLocaleString()})`
+              )
+            );
           }
         }
 
         if (options.showMetacritic && result.metacritic) {
           addSeparator();
-          steamLink.appendChild(createSpan(`steam-card-metacritic ${getMetacriticClass(result.metacritic)}`, String(result.metacritic)));
+          steamLink.appendChild(
+            createSpan(
+              `steam-card-metacritic ${getMetacriticClass(result.metacritic)}`,
+              String(result.metacritic)
+            )
+          );
         }
 
         if (options.showReleaseDate && result.releaseDate) {
           addSeparator();
-          steamLink.appendChild(createSpan("steam-card-release", result.releaseDate));
+          steamLink.appendChild(
+            createSpan("steam-card-release", result.releaseDate)
+          );
         }
 
         // Create container for both links
@@ -198,12 +224,16 @@ export default defineContentScript({
 
       const notFoundCard = document.createElement("div");
       notFoundCard.className = "steam-card steam-card-not-found";
-      notFoundCard.dataset.processing = "true";
       const notFoundText = document.createElement("span");
       notFoundText.className = "steam-card-text";
       notFoundText.textContent = "Not found on Steam";
       notFoundCard.appendChild(notFoundText);
-      return notFoundCard;
+
+      const container = document.createElement("div");
+      container.className = "steam-card-container";
+      container.dataset.processing = "true";
+      container.appendChild(notFoundCard);
+      return container;
     }
 
     function replaceLoadingWithElement(
@@ -298,7 +328,9 @@ export default defineContentScript({
           gameName,
         });
 
-        const card = createSteamCard(response.success ? response.result ?? null : null);
+        const card = createSteamCard(
+          response.success ? response.result ?? null : null
+        );
         replaceLoadingWithElement(parent, card);
       } catch {
         const errorCard = document.createElement("div");
@@ -311,7 +343,11 @@ export default defineContentScript({
     }
 
     async function processUpcomingRepack(span: Element) {
-      if (span.querySelector(".steam-inline-link, .steam-inline-not-found, .steam-inline-loading")) {
+      if (
+        span.querySelector(
+          ".steam-inline-link, .steam-inline-not-found, .steam-inline-loading"
+        )
+      ) {
         return;
       }
 
@@ -333,7 +369,9 @@ export default defineContentScript({
           fast: true,
         });
 
-        const link = createInlineSteamLink(response.success ? response.result ?? null : null);
+        const link = createInlineSteamLink(
+          response.success ? response.result ?? null : null
+        );
         loading.replaceWith(link);
       } catch {
         loading.remove();
