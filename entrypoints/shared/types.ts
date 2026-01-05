@@ -28,7 +28,6 @@ export interface GameData {
   isFree?: boolean;
 }
 
-// Cache entry states
 export type CacheStatus = "found" | "not_found";
 
 export interface CacheEntry {
@@ -37,13 +36,11 @@ export interface CacheEntry {
   timestamp: number;
 }
 
-// Storage keys
 export const STORAGE_KEYS = {
   DISPLAY_OPTIONS: "displayOptions",
   GAME_PREFIX: "game:",
 } as const;
 
-// Message actions
 export const MESSAGE_ACTIONS = {
   SEARCH_GAME: "searchGame",
 } as const;

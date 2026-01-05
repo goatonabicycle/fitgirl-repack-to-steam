@@ -1,6 +1,6 @@
 # FitGirl Steam Lookup
 
-Adds Steam links with prices, review scores, and other useful info directly to FitGirl Repacks game listings.
+Adds Steam and Steam DB links with prices, review scores, and other useful info directly to FitGirl Repacks game listings. This extension is not meant to promote piracy in any way, in fact, it's purpose is to encourage you to support the developers of the various games you see.
 
 ## Maybe this one is worth buying?
 
@@ -8,7 +8,7 @@ This is an extension that simply connects the lovely games you might see on a ce
 
 Fitgirl repacks is a great source for finding new releases or see updated games. If you find yourself constantly copy and pasting the title to see the game's price and reviews on Steam, because you might want to just buy it, this extension should save you some time.
 
-This extension is not meant to encourage or discourage any piracy related behaviour. It's simply linking two worlds together to make your life a little simpler.
+This extension simply links the two worlds together to make your life a little simpler.
 
 ## How to run it
 

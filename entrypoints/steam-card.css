@@ -20,7 +20,7 @@
   font-size: 12px;
   white-space: nowrap;
   gap: 8px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   width: fit-content;
   text-transform: uppercase;
 }
@@ -38,19 +38,19 @@
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .steam-card-db:hover {
   background: #2a475e;
   border-color: #66c0f4;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .steam-card:hover {
   background: #2a475e;
   border-color: #66c0f4;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .steam-card-text {
@@ -169,7 +169,6 @@
   white-space: nowrap;
 }
 
-/* Inline styles for upcoming repacks */
 .steam-inline-link {
   display: inline-block;
   padding: 2px 6px;

@@ -202,13 +202,11 @@ export default defineContentScript({
           );
         }
 
-        // Create container for both links
         const container = document.createElement("div");
         container.className = "steam-card-container";
         container.dataset.processing = "true";
         container.appendChild(steamLink);
 
-        // Add SteamDB link if enabled
         if (options.showSteamDb) {
           const steamDbLink = document.createElement("a");
           steamDbLink.href = `https://steamdb.info/app/${result.id}/`;
@@ -409,7 +407,6 @@ export default defineContentScript({
         processElement(detailTitle);
       }
 
-      // Process upcoming repacks - green spans with arrow prefix
       const upcomingSpans = document.querySelectorAll(
         'article.category-uncategorized .entry-content span[style*="color: #339966"]'
       );

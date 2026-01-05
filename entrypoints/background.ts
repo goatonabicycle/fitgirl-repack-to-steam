@@ -16,12 +16,18 @@ export default defineBackground(() => {
   let lastApiCall = 0;
   let cacheCleanedThisSession = false;
 
-  async function rateLimitedFetch(url: string, retryCount = 0, delay = API_DELAY): Promise<Response> {
+  async function rateLimitedFetch(
+    url: string,
+    retryCount = 0,
+    delay = API_DELAY
+  ): Promise<Response> {
     const now = Date.now();
     const timeSinceLastCall = now - lastApiCall;
 
     if (timeSinceLastCall < delay) {
-      await new Promise(resolve => setTimeout(resolve, delay - timeSinceLastCall));
+      await new Promise((resolve) =>
+        setTimeout(resolve, delay - timeSinceLastCall)
+      );
     }
 
     try {
@@ -29,14 +35,18 @@ export default defineBackground(() => {
       const response = await fetch(url);
 
       if (response.status === 429 && retryCount < MAX_RETRIES) {
-        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * delay));
+        await new Promise((resolve) =>
+          setTimeout(resolve, (retryCount + 1) * delay)
+        );
         return rateLimitedFetch(url, retryCount + 1, delay);
       }
 
       return response;
     } catch (error) {
       if (retryCount < MAX_RETRIES) {
-        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * delay));
+        await new Promise((resolve) =>
+          setTimeout(resolve, (retryCount + 1) * delay)
+        );
         return rateLimitedFetch(url, retryCount + 1, delay);
       }
       throw error;
@@ -69,31 +79,26 @@ export default defineBackground(() => {
         return game;
       }
 
-      // Extract release date
       if (details.release_date?.date) {
         game.releaseDate = details.release_date.date;
       }
 
-      // Extract metacritic score
       if (details.metacritic?.score) {
         game.metacritic = details.metacritic.score;
       }
 
-      // Check if free to play
       if (details.is_free) {
         game.isFree = true;
       }
 
-      // Extract price with currency from appdetails (more accurate than search)
       if (details.price_overview) {
         game.price = {
           final: details.price_overview.final,
           initial: details.price_overview.initial,
-          currency: details.price_overview.currency
+          currency: details.price_overview.currency,
         };
       }
 
-      // Fetch reviews from /appreviews/ API - this gives us Steam's exact review_score_desc
       const reviewsUrl = `https://store.steampowered.com/appreviews/${game.id}?json=1&language=all&purchase_type=all&num_per_page=0`;
       const reviewsResponse = await rateLimitedFetch(reviewsUrl);
 
@@ -102,10 +107,12 @@ export default defineBackground(() => {
         if (reviewData.success && reviewData.query_summary) {
           const summary = reviewData.query_summary;
           game.reviews = summary.total_reviews;
-          game.reviewScore = summary.total_reviews > 0
-            ? Math.round((summary.total_positive / summary.total_reviews) * 100)
-            : 0;
-          // Use Steam's exact review description - no guessing
+          game.reviewScore =
+            summary.total_reviews > 0
+              ? Math.round(
+                  (summary.total_positive / summary.total_reviews) * 100
+                )
+              : 0;
           game.reviewText = summary.review_score_desc || "No user reviews";
         }
       }
@@ -128,31 +135,51 @@ export default defineBackground(() => {
     price?: { final: number };
   }
 
-  function findBestMatch(gameName: string, results: SteamSearchResult[]): SteamSearchResult | null {
+  function findBestMatch(
+    gameName: string,
+    results: SteamSearchResult[]
+  ): SteamSearchResult | null {
     if (!results || results.length === 0) return null;
 
-    const normalizedSearchName = gameName.toLowerCase()
+    const normalizedSearchName = gameName
+      .toLowerCase()
       .replace(/\s*[–—-]+\s*-*\s*[\d.]+/g, "")
       .replace(/\s+/g, " ")
       .trim();
 
-    const exactMatch = results.find(game =>
-      game.name.toLowerCase() === normalizedSearchName
+    const exactMatch = results.find(
+      (game) => game.name.toLowerCase() === normalizedSearchName
     );
     if (exactMatch) {
       return exactMatch;
     }
 
     const commonModifiers = [
-      "goty", "game of the year", "complete", "definitive", "edition",
-      "remastered", "enhanced", "collection", "anniversary", "ultimate",
-      "deluxe", "standard", "gold", "platinum", "special", "extended"
+      "goty",
+      "game of the year",
+      "complete",
+      "definitive",
+      "edition",
+      "remastered",
+      "enhanced",
+      "collection",
+      "anniversary",
+      "ultimate",
+      "deluxe",
+      "standard",
+      "gold",
+      "platinum",
+      "special",
+      "extended",
     ];
 
-    const strippedSearchName = commonModifiers.reduce(
-      (name, modifier) => name.replace(new RegExp(`\\b${modifier}\\b`, "i"), ""),
-      normalizedSearchName
-    ).trim();
+    const strippedSearchName = commonModifiers
+      .reduce(
+        (name, modifier) =>
+          name.replace(new RegExp(`\\b${modifier}\\b`, "i"), ""),
+        normalizedSearchName
+      )
+      .trim();
 
     let baseSearchName = normalizedSearchName;
     if (baseSearchName.includes(":")) {
@@ -163,47 +190,64 @@ export default defineBackground(() => {
       baseSearchName = baseSearchName.replace(/\s+-\s+.*$/, "").trim();
     }
 
-    const baseNameMatch = results.find(game =>
-      game.name.toLowerCase() === baseSearchName
+    const baseNameMatch = results.find(
+      (game) => game.name.toLowerCase() === baseSearchName
     );
 
     if (baseNameMatch) {
       return baseNameMatch;
     }
 
-    const strippedMatch = results.find(game => {
-      const strippedGameName = commonModifiers.reduce(
-        (name, modifier) => name.replace(new RegExp(`\\b${modifier}\\b`, "i"), ""),
-        game.name.toLowerCase()
-      ).trim();
+    const strippedMatch = results.find((game) => {
+      const strippedGameName = commonModifiers
+        .reduce(
+          (name, modifier) =>
+            name.replace(new RegExp(`\\b${modifier}\\b`, "i"), ""),
+          game.name.toLowerCase()
+        )
+        .trim();
 
-      return strippedGameName === strippedSearchName ||
-        strippedGameName === baseSearchName;
+      return (
+        strippedGameName === strippedSearchName ||
+        strippedGameName === baseSearchName
+      );
     });
 
     if (strippedMatch) {
       return strippedMatch;
     }
 
-    const simplifiedSearchName = normalizedSearchName.replace(/[^a-z0-9\s]/g, "").trim();
-    const baseSimplifiedName = baseSearchName.replace(/[^a-z0-9\s]/g, "").trim();
+    const simplifiedSearchName = normalizedSearchName
+      .replace(/[^a-z0-9\s]/g, "")
+      .trim();
+    const baseSimplifiedName = baseSearchName
+      .replace(/[^a-z0-9\s]/g, "")
+      .trim();
 
-    const partialMatch = results.find(game => {
-      const simplifiedGameName = game.name.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
+    const partialMatch = results.find((game) => {
+      const simplifiedGameName = game.name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, "")
+        .trim();
 
-      if (simplifiedGameName.includes(simplifiedSearchName) ||
+      if (
+        simplifiedGameName.includes(simplifiedSearchName) ||
         simplifiedGameName.includes(baseSimplifiedName) ||
         simplifiedSearchName.includes(simplifiedGameName) ||
-        baseSimplifiedName.includes(simplifiedGameName)) {
+        baseSimplifiedName.includes(simplifiedGameName)
+      ) {
         return true;
       }
 
-      const searchWords = (simplifiedSearchName.length <= baseSimplifiedName.length ?
-        simplifiedSearchName : baseSimplifiedName).split(/\s+/);
+      const searchWords = (
+        simplifiedSearchName.length <= baseSimplifiedName.length
+          ? simplifiedSearchName
+          : baseSimplifiedName
+      ).split(/\s+/);
       const gameWords = simplifiedGameName.split(/\s+/);
 
-      const matchingWords = searchWords.filter(word =>
-        word.length > 2 && gameWords.includes(word)
+      const matchingWords = searchWords.filter(
+        (word) => word.length > 2 && gameWords.includes(word)
       ).length;
 
       if (searchWords.length === 0) return false;
@@ -218,7 +262,7 @@ export default defineBackground(() => {
     const firstFewWords = baseSearchName.split(/\s+/).slice(0, 3).join(" ");
 
     if (firstFewWords.length > 3 && firstFewWords !== baseSearchName) {
-      const firstWordsMatch = results.find(game => {
+      const firstWordsMatch = results.find((game) => {
         const gName = game.name.toLowerCase();
         return gName.includes(firstFewWords) || firstFewWords.includes(gName);
       });
@@ -231,11 +275,19 @@ export default defineBackground(() => {
     const firstResult = results[0];
     const firstResultName = firstResult.name.toLowerCase();
 
-    const firstResultSimplified = firstResultName.replace(/[^a-z0-9\s]/g, "").trim();
-    const searchWordsSet = new Set(simplifiedSearchName.split(/\s+/).filter(w => w.length > 2));
-    const resultWordsSet = new Set(firstResultSimplified.split(/\s+/).filter(w => w.length > 2));
+    const firstResultSimplified = firstResultName
+      .replace(/[^a-z0-9\s]/g, "")
+      .trim();
+    const searchWordsSet = new Set(
+      simplifiedSearchName.split(/\s+/).filter((w) => w.length > 2)
+    );
+    const resultWordsSet = new Set(
+      firstResultSimplified.split(/\s+/).filter((w) => w.length > 2)
+    );
 
-    const intersection = [...searchWordsSet].filter(x => resultWordsSet.has(x));
+    const intersection = [...searchWordsSet].filter((x) =>
+      resultWordsSet.has(x)
+    );
 
     if (intersection.length > 0) {
       return firstResult;
@@ -245,7 +297,9 @@ export default defineBackground(() => {
   }
 
   async function trySearch(searchTerm: string, delay = API_DELAY) {
-    const searchUrl = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(searchTerm)}&l=english&cc=US`;
+    const searchUrl = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(
+      searchTerm
+    )}&l=english&cc=US`;
 
     try {
       const response = await rateLimitedFetch(searchUrl, 0, delay);
@@ -259,7 +313,9 @@ export default defineBackground(() => {
     }
   }
 
-  async function getCachedGame(key: string): Promise<{ data: GameData | null; status: CacheStatus } | null> {
+  async function getCachedGame(
+    key: string
+  ): Promise<{ data: GameData | null; status: CacheStatus } | null> {
     const result = await browser.storage.local.get([key]);
     if (!result[key]) {
       return null;
@@ -275,11 +331,15 @@ export default defineBackground(() => {
     return { data: entry.data, status: entry.status };
   }
 
-  async function cacheResult(key: string, data: GameData | null, status: CacheStatus) {
+  async function cacheResult(
+    key: string,
+    data: GameData | null,
+    status: CacheStatus
+  ) {
     const entry: CacheEntry = {
       data,
       status,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     await browser.storage.local.set({ [key]: entry });
@@ -308,20 +368,26 @@ export default defineBackground(() => {
     }
   }
 
-  async function searchSteam(gameName: string, fast = false): Promise<GameData | null> {
+  async function searchSteam(
+    gameName: string,
+    fast = false
+  ): Promise<GameData | null> {
     const delay = fast ? API_DELAY_FAST : API_DELAY;
-    const cacheKey = `${STORAGE_KEYS.GAME_PREFIX}${gameName.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+    const cacheKey = `${STORAGE_KEYS.GAME_PREFIX}${gameName
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "")}`;
 
     const cached = await getCachedGame(cacheKey);
     if (cached) {
-      // Only return cached result if it was a definitive "not found" - don't cache errors
       return cached.data;
     }
 
     let data = await trySearch(gameName, delay);
 
-    if ((!data || !data.items || data.items.length === 0) &&
-      (gameName.includes("–") || gameName.includes(" - "))) {
+    if (
+      (!data || !data.items || data.items.length === 0) &&
+      (gameName.includes("–") || gameName.includes(" - "))
+    ) {
       let baseName = gameName;
 
       if (gameName.includes("–")) {
@@ -333,7 +399,10 @@ export default defineBackground(() => {
       data = await trySearch(baseName, delay);
     }
 
-    if ((!data || !data.items || data.items.length === 0) && gameName.includes(":")) {
+    if (
+      (!data || !data.items || data.items.length === 0) &&
+      gameName.includes(":")
+    ) {
       const baseName = gameName.split(":")[0].trim();
       data = await trySearch(baseName, delay);
     }
@@ -345,13 +414,17 @@ export default defineBackground(() => {
 
     const games = data.items.filter((item: SteamSearchResult) => {
       const name = item.name.toLowerCase();
-      return item.type === "app" &&
-        !(name.endsWith(" demo") ||
+      return (
+        item.type === "app" &&
+        !(
+          name.endsWith(" demo") ||
           name === "demo" ||
           name.startsWith("demo ") ||
           name.endsWith(" soundtrack") ||
           name.endsWith(" dlc") ||
-          name.endsWith(" art book"));
+          name.endsWith(" art book")
+        )
+      );
     });
 
     if (games.length === 0) {
@@ -368,7 +441,7 @@ export default defineBackground(() => {
     const gameData: GameData = {
       id: matchedGame.id,
       name: matchedGame.name,
-      price: matchedGame.price
+      price: matchedGame.price,
     };
 
     try {
@@ -376,22 +449,23 @@ export default defineBackground(() => {
       await cacheResult(cacheKey, enrichedGame, "found");
       return enrichedGame;
     } catch {
-      // Don't cache errors - allow retry on next visit
       gameData.reviewText = "Error fetching reviews";
       return gameData;
     }
   }
 
-  browser.runtime.onMessage.addListener((request: SearchGameMessage, _sender, sendResponse) => {
-    if (request.action === MESSAGE_ACTIONS.SEARCH_GAME) {
-      searchSteam(request.gameName, request.fast || false)
-        .then(result => {
-          sendResponse({ success: true, result });
-        })
-        .catch(error => {
-          sendResponse({ success: false, error: error.message });
-        });
-      return true;
+  browser.runtime.onMessage.addListener(
+    (request: SearchGameMessage, _sender, sendResponse) => {
+      if (request.action === MESSAGE_ACTIONS.SEARCH_GAME) {
+        searchSteam(request.gameName, request.fast || false)
+          .then((result) => {
+            sendResponse({ success: true, result });
+          })
+          .catch((error) => {
+            sendResponse({ success: false, error: error.message });
+          });
+        return true;
+      }
     }
-  });
+  );
 });
