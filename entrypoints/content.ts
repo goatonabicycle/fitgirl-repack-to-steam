@@ -34,6 +34,7 @@ export default defineContentScript({
         /[\[\(]?repack[\]\)]?/i,
         /[\[\(]?fitgirl[\]\)]?/i,
         /[\[\(]?multi\d+[\]\)]?/i,
+        /\[HV\]/i,
         /-\s*free\s*download/i,
         /:\s*Supporter Edition/i,
         /:\s*Deluxe Edition/i,

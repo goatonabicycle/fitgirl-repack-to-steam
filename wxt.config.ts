@@ -4,6 +4,9 @@ export default defineConfig({
   runner: {
     startUrls: ['https://fitgirl-repacks.site/']
   },
+  zip: {
+    excludeSources: ['dist/**', 'node_modules/**', '.output/**', 'meta/**']
+  },
   manifest: {
     name: 'FitGirl Steam Lookup',
     short_name: 'FG Steam Lookup',
@@ -17,6 +20,13 @@ export default defineConfig({
     host_permissions: [
       '*://*.steampowered.com/*'
     ],
-    permissions: ['storage']
+    permissions: ['storage'],
+    browser_specific_settings: {
+      gecko: {
+        data_collection_permissions: {
+          required: ['none']
+        }
+      }
+    }
   }
 });
