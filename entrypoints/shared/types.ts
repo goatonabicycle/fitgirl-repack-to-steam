@@ -28,11 +28,8 @@ export interface GameData {
   isFree?: boolean;
 }
 
-export type CacheStatus = "found" | "not_found";
-
 export interface CacheEntry {
   data: GameData | null;
-  status: CacheStatus;
   timestamp: number;
 }
 

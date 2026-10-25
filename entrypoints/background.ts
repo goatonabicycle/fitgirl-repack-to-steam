@@ -2,52 +2,78 @@ import {
   type GameData,
   type SearchGameMessage,
   type CacheEntry,
-  type CacheStatus,
   STORAGE_KEYS,
   MESSAGE_ACTIONS,
 } from "./shared/types";
 
 export default defineBackground(() => {
   const CACHE_EXPIRATION = 5 * 24 * 60 * 60 * 1000; // 5 days
-  const API_DELAY = 1000;
-  const API_DELAY_FAST = 500;
+  // A failed search can mean Steam was down or blocking us, so try those again sooner.
+  const NOT_FOUND_EXPIRATION = 5 * 60 * 60 * 1000; // 5 hours
+  const API_DELAY = 500;
   const MAX_RETRIES = 3;
 
   let lastApiCall = 0;
   let cacheCleanedThisSession = false;
 
+  // Steam lookups run one at a time. Without this, a page full of titles fires them all at once.
+  // Card lookups run first. Inline lookups are the "upcoming" links, which are a bonus.
+  const cardLookups: (() => Promise<void>)[] = [];
+  const inlineLookups: (() => Promise<void>)[] = [];
+  let lookupRunning = false;
+
+  function queueLookup<T>(inline: boolean, lookup: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const queue = inline ? inlineLookups : cardLookups;
+      queue.push(() => lookup().then(resolve, reject));
+      runLookups();
+    });
+  }
+
+  async function runLookups() {
+    if (lookupRunning) return;
+    lookupRunning = true;
+
+    while (cardLookups.length > 0 || inlineLookups.length > 0) {
+      const next = cardLookups.shift() ?? inlineLookups.shift();
+      await next?.();
+    }
+
+    lookupRunning = false;
+  }
+
   async function rateLimitedFetch(
     url: string,
-    retryCount = 0,
-    delay = API_DELAY
+    retryCount = 0
   ): Promise<Response> {
     const now = Date.now();
     const timeSinceLastCall = now - lastApiCall;
 
-    if (timeSinceLastCall < delay) {
+    if (timeSinceLastCall < API_DELAY) {
       await new Promise((resolve) =>
-        setTimeout(resolve, delay - timeSinceLastCall)
+        setTimeout(resolve, API_DELAY - timeSinceLastCall)
       );
     }
 
     try {
       lastApiCall = Date.now();
-      const response = await fetch(url);
+      // Lookups run one at a time, so a request that never answers would block all of them.
+      const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
 
       if (response.status === 429 && retryCount < MAX_RETRIES) {
         await new Promise((resolve) =>
-          setTimeout(resolve, (retryCount + 1) * delay)
+          setTimeout(resolve, (retryCount + 1) * API_DELAY)
         );
-        return rateLimitedFetch(url, retryCount + 1, delay);
+        return rateLimitedFetch(url, retryCount + 1);
       }
 
       return response;
     } catch (error) {
       if (retryCount < MAX_RETRIES) {
         await new Promise((resolve) =>
-          setTimeout(resolve, (retryCount + 1) * delay)
+          setTimeout(resolve, (retryCount + 1) * API_DELAY)
         );
-        return rateLimitedFetch(url, retryCount + 1, delay);
+        return rateLimitedFetch(url, retryCount + 1);
       }
       throw error;
     }
@@ -71,61 +97,59 @@ export default defineBackground(() => {
   }
 
   async function enrichGameWithReviews(game: GameData): Promise<GameData> {
-    try {
-      const details = await fetchGameDetails(game.id);
+    // languages=all is silently ignored and returns English only. It must be languages[0]. purchase_type 1 = all.
+    const reviewsUrl = `https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/?appid=${game.id}&languages%5B0%5D=all&purchase_type=1&num_per_page=1`;
+    // Reviews come from a different host than the store details, so both requests go out together.
+    const [details, reviewsResponse] = await Promise.all([
+      fetchGameDetails(game.id),
+      rateLimitedFetch(reviewsUrl),
+    ]);
 
-      if (details.release_date?.coming_soon) {
-        game.reviewText = "Coming Soon";
-        return game;
-      }
-
-      if (details.release_date?.date) {
-        game.releaseDate = details.release_date.date;
-      }
-
-      if (details.metacritic?.score) {
-        game.metacritic = details.metacritic.score;
-      }
-
-      if (details.is_free) {
-        game.isFree = true;
-      }
-
-      if (details.price_overview) {
-        game.price = {
-          final: details.price_overview.final,
-          initial: details.price_overview.initial,
-          currency: details.price_overview.currency,
-        };
-      }
-
-      const reviewsUrl = `https://store.steampowered.com/appreviews/${game.id}?json=1&language=all&purchase_type=all&num_per_page=0`;
-      const reviewsResponse = await rateLimitedFetch(reviewsUrl);
-
-      if (reviewsResponse.ok) {
-        const reviewData = await reviewsResponse.json();
-        if (reviewData.success && reviewData.query_summary) {
-          const summary = reviewData.query_summary;
-          game.reviews = summary.total_reviews;
-          game.reviewScore =
-            summary.total_reviews > 0
-              ? Math.round(
-                  (summary.total_positive / summary.total_reviews) * 100
-                )
-              : 0;
-          game.reviewText = summary.review_score_desc || "No user reviews";
-        }
-      }
-
-      if (!game.reviewText) {
-        game.reviewText = "No user reviews";
-      }
-
-      return game;
-    } catch {
-      game.reviewText = "Error loading details";
+    if (details.release_date?.coming_soon) {
+      game.reviewText = "Coming Soon";
       return game;
     }
+
+    if (details.release_date?.date) {
+      game.releaseDate = details.release_date.date;
+    }
+
+    if (details.metacritic?.score) {
+      game.metacritic = details.metacritic.score;
+    }
+
+    if (details.is_free) {
+      game.isFree = true;
+    }
+
+    if (details.price_overview) {
+      game.price = {
+        final: details.price_overview.final,
+        initial: details.price_overview.initial,
+        currency: details.price_overview.currency,
+      };
+    }
+
+    if (reviewsResponse.ok) {
+      const reviewData = await reviewsResponse.json();
+      if (reviewData.response?.query_summary) {
+        const summary = reviewData.response.query_summary;
+        game.reviews = summary.total_reviews;
+        game.reviewScore =
+          summary.total_reviews > 0
+            ? Math.round(
+                (summary.total_positive / summary.total_reviews) * 100
+              )
+            : 0;
+        game.reviewText = summary.review_score_desc || "No user reviews";
+      }
+    }
+
+    if (!game.reviewText) {
+      game.reviewText = "No user reviews";
+    }
+
+    return game;
   }
 
   interface SteamSearchResult {
@@ -296,13 +320,13 @@ export default defineBackground(() => {
     return null;
   }
 
-  async function trySearch(searchTerm: string, delay = API_DELAY) {
+  async function trySearch(searchTerm: string) {
     const searchUrl = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(
       searchTerm
     )}&l=english&cc=US`;
 
     try {
-      const response = await rateLimitedFetch(searchUrl, 0, delay);
+      const response = await rateLimitedFetch(searchUrl);
       if (!response.ok) {
         return null;
       }
@@ -315,30 +339,26 @@ export default defineBackground(() => {
 
   async function getCachedGame(
     key: string
-  ): Promise<{ data: GameData | null; status: CacheStatus } | null> {
+  ): Promise<{ data: GameData | null } | null> {
     const result = await browser.storage.local.get([key]);
     if (!result[key]) {
       return null;
     }
 
     const entry = result[key] as CacheEntry;
+    const expiration = entry.data ? CACHE_EXPIRATION : NOT_FOUND_EXPIRATION;
 
-    if (Date.now() - entry.timestamp > CACHE_EXPIRATION) {
+    if (Date.now() - entry.timestamp > expiration) {
       await browser.storage.local.remove([key]);
       return null;
     }
 
-    return { data: entry.data, status: entry.status };
+    return { data: entry.data };
   }
 
-  async function cacheResult(
-    key: string,
-    data: GameData | null,
-    status: CacheStatus
-  ) {
+  async function cacheResult(key: string, data: GameData | null) {
     const entry: CacheEntry = {
       data,
-      status,
       timestamp: Date.now(),
     };
 
@@ -372,7 +392,6 @@ export default defineBackground(() => {
     gameName: string,
     fast = false
   ): Promise<GameData | null> {
-    const delay = fast ? API_DELAY_FAST : API_DELAY;
     const cacheKey = `${STORAGE_KEYS.GAME_PREFIX}${gameName
       .toLowerCase()
       .replace(/[^a-z0-9]/g, "")}`;
@@ -382,7 +401,14 @@ export default defineBackground(() => {
       return cached.data;
     }
 
-    let data = await trySearch(gameName, delay);
+    return queueLookup(fast, () => lookUpSteam(gameName, cacheKey));
+  }
+
+  async function lookUpSteam(
+    gameName: string,
+    cacheKey: string
+  ): Promise<GameData | null> {
+    let data = await trySearch(gameName);
 
     if (
       (!data || !data.items || data.items.length === 0) &&
@@ -396,7 +422,7 @@ export default defineBackground(() => {
         baseName = gameName.split(" - ")[0].trim();
       }
 
-      data = await trySearch(baseName, delay);
+      data = await trySearch(baseName);
     }
 
     if (
@@ -404,11 +430,11 @@ export default defineBackground(() => {
       gameName.includes(":")
     ) {
       const baseName = gameName.split(":")[0].trim();
-      data = await trySearch(baseName, delay);
+      data = await trySearch(baseName);
     }
 
     if (!data || !data.items || data.items.length === 0) {
-      await cacheResult(cacheKey, null, "not_found");
+      await cacheResult(cacheKey, null);
       return null;
     }
 
@@ -428,13 +454,13 @@ export default defineBackground(() => {
     });
 
     if (games.length === 0) {
-      await cacheResult(cacheKey, null, "not_found");
+      await cacheResult(cacheKey, null);
       return null;
     }
 
     const matchedGame = findBestMatch(gameName, games);
     if (!matchedGame) {
-      await cacheResult(cacheKey, null, "not_found");
+      await cacheResult(cacheKey, null);
       return null;
     }
 
@@ -446,13 +472,25 @@ export default defineBackground(() => {
 
     try {
       const enrichedGame = await enrichGameWithReviews(gameData);
-      await cacheResult(cacheKey, enrichedGame, "found");
+      await cacheResult(cacheKey, enrichedGame);
       return enrichedGame;
     } catch {
       gameData.reviewText = "Error fetching reviews";
       return gameData;
     }
   }
+
+  // Drop cached lookups on update so results cached by an older version are refetched.
+  browser.runtime.onInstalled.addListener(async ({ reason }) => {
+    if (reason !== "update") return;
+
+    const items = await browser.storage.local.get(null);
+    const gameKeys = Object.keys(items).filter((key) =>
+      key.startsWith(STORAGE_KEYS.GAME_PREFIX)
+    );
+
+    await browser.storage.local.remove(gameKeys);
+  });
 
   browser.runtime.onMessage.addListener(
     (request: SearchGameMessage, _sender, sendResponse) => {

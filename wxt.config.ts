@@ -5,7 +5,7 @@ export default defineConfig({
     startUrls: ['https://fitgirl-repacks.site/']
   },
   zip: {
-    excludeSources: ['dist/**', 'node_modules/**', '.output/**', 'meta/**']
+    excludeSources: ['dist/**', 'node_modules/**', '.output/**', 'meta/**', 'Mistakes.md']
   },
   manifest: {
     name: 'FitGirl Steam Lookup',
@@ -23,6 +23,7 @@ export default defineConfig({
     permissions: ['storage'],
     browser_specific_settings: {
       gecko: {
+        id: '{372df456-f62b-43f9-9d73-c49dbddcf882}',
         data_collection_permissions: {
           required: ['none']
         }

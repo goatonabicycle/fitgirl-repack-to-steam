@@ -1,7 +1,8 @@
 {
-  "name": "fitgirl-repack-to-steam",
-  "version": "1.0.0",
+  "name": "fitgirl-steam-lookup",
+  "version": "1.0.1",
   "description": "This links FitGirl Repacks entries to their Steam pages. Maybe you should buy this one?",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "wxt",
@@ -12,10 +13,12 @@
     "zip:firefox": "wxt zip --browser firefox",
     "format": "biome format --write .",
     "lint": "biome lint .",
+    "test": "wxt build && wxt build --browser firefox && node --test tests/extension.test.mjs",
     "icons": "node scripts/generate-icons.mjs"
   },
   "devDependencies": {
-    "@biomejs/biome": "latest",
+    "@biomejs/biome": "2.3.8",
+    "puppeteer-core": "^25.16.0",
     "sharp": "^0.34.5",
     "wxt": "^0.19.0"
   }

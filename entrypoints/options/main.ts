@@ -4,6 +4,14 @@ import {
   STORAGE_KEYS,
 } from "../shared/types";
 
+// Each checkbox id in index.html matches a DisplayOptions key.
+const optionKeys = Object.keys(
+  DEFAULT_DISPLAY_OPTIONS
+) as (keyof DisplayOptions)[];
+
+const checkboxFor = (key: keyof DisplayOptions) =>
+  document.getElementById(key) as HTMLInputElement;
+
 async function loadOptions() {
   const result = await browser.storage.local.get(STORAGE_KEYS.DISPLAY_OPTIONS);
   const stored = result[STORAGE_KEYS.DISPLAY_OPTIONS] as
@@ -11,38 +19,16 @@ async function loadOptions() {
     | undefined;
   const options: DisplayOptions = { ...DEFAULT_DISPLAY_OPTIONS, ...stored };
 
-  (document.getElementById("showPrice") as HTMLInputElement).checked =
-    options.showPrice;
-  (document.getElementById("showReviews") as HTMLInputElement).checked =
-    options.showReviews;
-  (document.getElementById("showReleaseDate") as HTMLInputElement).checked =
-    options.showReleaseDate;
-  (document.getElementById("showMetacritic") as HTMLInputElement).checked =
-    options.showMetacritic;
-  (document.getElementById("showSteamDb") as HTMLInputElement).checked =
-    options.showSteamDb;
-  (document.getElementById("openInSteamClient") as HTMLInputElement).checked =
-    options.openInSteamClient;
+  for (const key of optionKeys) {
+    checkboxFor(key).checked = options[key];
+  }
 }
 
 async function saveOptions() {
-  const options = {
-    showPrice: (document.getElementById("showPrice") as HTMLInputElement)
-      .checked,
-    showReviews: (document.getElementById("showReviews") as HTMLInputElement)
-      .checked,
-    showReleaseDate: (
-      document.getElementById("showReleaseDate") as HTMLInputElement
-    ).checked,
-    showMetacritic: (
-      document.getElementById("showMetacritic") as HTMLInputElement
-    ).checked,
-    showSteamDb: (document.getElementById("showSteamDb") as HTMLInputElement)
-      .checked,
-    openInSteamClient: (
-      document.getElementById("openInSteamClient") as HTMLInputElement
-    ).checked,
-  };
+  const options: DisplayOptions = { ...DEFAULT_DISPLAY_OPTIONS };
+  for (const key of optionKeys) {
+    options[key] = checkboxFor(key).checked;
+  }
 
   await browser.storage.local.set({ [STORAGE_KEYS.DISPLAY_OPTIONS]: options });
 

@@ -1,10 +1,10 @@
-# Privacy Policy for FitGirl Repack to Steam
+# Privacy Policy for FitGirl Steam Lookup
 
-Last updated: December 21, 2024
+Last updated: October 25, 2026
 
 ## Overview
 
-FitGirl Repack to Steam is a browser extension that displays Steam game information on FitGirl Repacks pages. This extension is designed with privacy in mind and collects no personal data.
+FitGirl Steam Lookup is a browser extension that displays Steam game information on FitGirl Repacks pages. This extension is designed with privacy in mind and collects no personal data.
 
 ## Data Collection
 
@@ -21,7 +21,7 @@ This data never leaves your device and is not accessible to anyone except you.
 
 ## External Requests
 
-This extension makes requests to Steam's public API (`store.steampowered.com`) to fetch game information. These requests include:
+This extension makes requests to Steam's public APIs (`store.steampowered.com` and `api.steampowered.com`) to fetch game information. These requests include:
 
 - The game name extracted from the page you're viewing
 - Standard HTTP headers sent by your browser

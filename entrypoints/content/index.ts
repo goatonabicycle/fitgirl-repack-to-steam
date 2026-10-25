@@ -1,4 +1,4 @@
-import "./steam-card.css";
+import "./style.css";
 import {
   type DisplayOptions,
   type GameData,
@@ -6,11 +6,10 @@ import {
   DEFAULT_DISPLAY_OPTIONS,
   STORAGE_KEYS,
   MESSAGE_ACTIONS,
-} from "./shared/types";
+} from "../shared/types";
 
 export default defineContentScript({
   matches: ["*://*.fitgirl-repacks.site/*"],
-  runAt: "document_start",
 
   async main() {
     let options: DisplayOptions = { ...DEFAULT_DISPLAY_OPTIONS };
@@ -51,7 +50,7 @@ export default defineContentScript({
       cleanedName = cleanedName.replace(/\s*–\s*v?\d.*$/i, "");
       cleanedName = cleanedName.replace(/\s*–\s*[^–]+$/i, "");
       cleanedName = cleanedName.replace(/\s*\([^)]*\)/g, "");
-      cleanedName = cleanedName.replace(/[,;:\s]+$/g, "");
+      cleanedName = cleanedName.replace(/[,;:–\s]+$/g, "");
       cleanedName = cleanedName.replace(/\s+/g, " ");
 
       return cleanedName.trim();
@@ -377,19 +376,15 @@ export default defineContentScript({
       }
     }
 
-    function findAndProcessGames() {
-      const mainTitles = document.querySelectorAll(
-        ".entry-title > a:first-of-type:not(:has(~ .steam-card)):not(.steam-card-skipped)"
-      );
-      const detailTitle = document.querySelector(
-        "article.type-post > .entry-header .entry-title:not(:has(~ .steam-card))"
-      );
-
+    function processWhenVisible(
+      elements: Iterable<Element>,
+      process: (element: Element) => void
+    ) {
       const observer = new IntersectionObserver(
         (entries, obs) => {
           for (const entry of entries) {
             if (entry.isIntersecting) {
-              processElement(entry.target);
+              process(entry.target);
               obs.unobserve(entry.target);
             }
           }
@@ -400,9 +395,20 @@ export default defineContentScript({
         }
       );
 
-      for (const title of mainTitles) {
-        observer.observe(title);
+      for (const element of elements) {
+        observer.observe(element);
       }
+    }
+
+    function findAndProcessGames() {
+      const mainTitles = document.querySelectorAll(
+        ".entry-title > a:first-of-type:not(:has(~ .steam-card)):not(.steam-card-skipped)"
+      );
+      const detailTitle = document.querySelector(
+        "article.type-post > .entry-header .entry-title:not(:has(~ .steam-card))"
+      );
+
+      processWhenVisible(mainTitles, processElement);
 
       if (detailTitle) {
         processElement(detailTitle);
@@ -411,15 +417,9 @@ export default defineContentScript({
       const upcomingSpans = document.querySelectorAll(
         'article.category-uncategorized .entry-content span[style*="color: #339966"]'
       );
-      for (const span of upcomingSpans) {
-        processUpcomingRepack(span);
-      }
+      processWhenVisible(upcomingSpans, processUpcomingRepack);
     }
 
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", findAndProcessGames);
-    } else {
-      findAndProcessGames();
-    }
+    findAndProcessGames();
   },
 });
